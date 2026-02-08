@@ -327,7 +327,7 @@ fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
     // Emit warnings for invalid regex patterns
     for (path, pat, err) in &invalid_patterns {
         warnings.push(Warning {
-            data_path: String::new(),
+            data_path: "/".to_string(),
             schema_path: path.clone(),
             kind: WarningKind::ConstraintUnevaluable {
                 constraint: "pattern".to_string(),
@@ -343,7 +343,7 @@ fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
         // Advisory constraints — just note they were dropped
         if ADVISORY_CONSTRAINTS.contains(&dc.constraint.as_str()) {
             warnings.push(Warning {
-                data_path: String::new(),
+                data_path: "/".to_string(),
                 schema_path: dc.path.clone(),
                 kind: WarningKind::ConstraintUnevaluable {
                     constraint: dc.constraint.clone(),
@@ -354,6 +354,15 @@ fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
                 ),
             });
             continue;
+        }
+
+        // Skip traversal for invalid pattern constraints (already warned above)
+        if dc.constraint == "pattern" {
+            if let Some(pat) = dc.value.as_str() {
+                if !regex_cache.contains_key(pat) {
+                    continue;
+                }
+            }
         }
 
         // Locate data nodes for this constraint's path
@@ -1149,5 +1158,27 @@ mod tests {
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(result.warnings.len(), 1);
         assert_eq!(result.warnings[0].data_path, "/S_name");
+    }
+
+    // Test 28: Invalid regex pattern emits ConstraintUnevaluable warning
+    #[test]
+    fn test_invalid_regex_constraint_unevaluable() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/code".to_string(),
+            constraint: "pattern".to_string(),
+            value: json!("[invalid"), // unclosed bracket = invalid regex
+        });
+
+        let data = json!({"code": "anything"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].data_path, "/");
+        assert_eq!(result.warnings[0].schema_path, "#/properties/code");
+        assert!(result.warnings[0].message.contains("invalid regex"));
+        assert!(
+            matches!(&result.warnings[0].kind, WarningKind::ConstraintUnevaluable { constraint } if constraint == "pattern")
+        );
     }
 }
