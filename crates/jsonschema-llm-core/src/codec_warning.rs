@@ -1,4 +1,10 @@
 //! Warning types emitted during rehydration when dropped constraints are violated.
+//!
+//! These warnings are **advisory** — they indicate that the LLM output may not
+//! conform to constraints that were removed during schema conversion (e.g. regex
+//! patterns, numeric bounds, string lengths). Callers should inspect warnings to
+//! detect potentially hallucinated or out-of-spec data and decide whether to
+//! reject, retry, or accept the output.
 
 use serde::{Deserialize, Serialize};
 
