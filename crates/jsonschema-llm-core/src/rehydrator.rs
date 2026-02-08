@@ -318,6 +318,13 @@ fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
                         invalid_patterns.push((dc.path.clone(), pat.to_string(), e.to_string()));
                     }
                 }
+            } else {
+                // Non-string pattern value — cannot evaluate
+                invalid_patterns.push((
+                    dc.path.clone(),
+                    dc.value.to_string(),
+                    "expected string value".to_string(),
+                ));
             }
         }
     }
@@ -1177,6 +1184,27 @@ mod tests {
         assert_eq!(result.warnings[0].data_path, "/");
         assert_eq!(result.warnings[0].schema_path, "#/properties/code");
         assert!(result.warnings[0].message.contains("invalid regex"));
+        assert!(
+            matches!(&result.warnings[0].kind, WarningKind::ConstraintUnevaluable { constraint } if constraint == "pattern")
+        );
+    }
+
+    // Test 29: Non-string pattern value emits ConstraintUnevaluable warning
+    #[test]
+    fn test_non_string_pattern_constraint_unevaluable() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/code".to_string(),
+            constraint: "pattern".to_string(),
+            value: json!(42), // not a string
+        });
+
+        let data = json!({"code": "anything"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].data_path, "/");
+        assert!(result.warnings[0].message.contains("expected string value"));
         assert!(
             matches!(&result.warnings[0].kind, WarningKind::ConstraintUnevaluable { constraint } if constraint == "pattern")
         );
