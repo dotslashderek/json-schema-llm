@@ -60,7 +60,7 @@ pub fn build_path(parent: &str, segments: &[&str]) -> String {
 /// Order matters: unescape `~1` first to avoid double-unescaping.
 /// Returns `Cow::Borrowed` when no unescaping is needed (the common case).
 pub fn unescape_pointer_segment(segment: &str) -> Cow<str> {
-    if segment.contains('~') {
+    if segment.contains("~0") || segment.contains("~1") {
         Cow::Owned(segment.replace("~1", "/").replace("~0", "~"))
     } else {
         Cow::Borrowed(segment)
@@ -80,9 +80,22 @@ pub fn unescape_pointer_segment(segment: &str) -> Cow<str> {
 /// ```
 pub fn split_path(path: &str) -> Vec<String> {
     let stripped = path.strip_prefix('#').unwrap_or(path);
-    stripped
-        .split('/')
-        .filter(|s| !s.is_empty())
+
+    // An empty fragment ("#" or "") refers to the whole document.
+    if stripped.is_empty() {
+        return Vec::new();
+    }
+
+    let mut segments_iter = stripped.split('/');
+
+    // A leading "/" produces an initial empty segment from split('/') that
+    // represents the root — skip it. Subsequent empty segments are significant
+    // per RFC 6901 (e.g. "#/" → [""] refers to the empty-string key).
+    if stripped.starts_with('/') {
+        segments_iter.next();
+    }
+
+    segments_iter
         .map(|s| unescape_pointer_segment(s).into_owned())
         .collect()
 }
