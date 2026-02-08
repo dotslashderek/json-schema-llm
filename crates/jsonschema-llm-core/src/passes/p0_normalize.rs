@@ -9,10 +9,21 @@
 //! 3. `definitions` → `$defs` rename (post-resolution, Phase 3)
 //! 4. `$defs` cleanup (strip fully-inlined entries, preserve recursive)
 
-use serde_json::Value;
+use std::collections::HashSet;
+
+use serde_json::{Map, Value};
 
 use crate::config::ConvertOptions;
 use crate::error::ConvertError;
+use crate::schema_utils::build_path;
+
+/// Shared traversal context for $ref resolution, reducing argument count.
+struct RefContext<'a> {
+    root: &'a Value,
+    config: &'a ConvertOptions,
+    visiting: HashSet<String>,
+    recursive_refs: Vec<String>,
+}
 
 /// Result of running the schema normalization pass.
 #[derive(Debug)]
@@ -23,6 +34,21 @@ pub struct NormalizePassResult {
     /// These are left as `$ref` for Pass 5 to break.
     pub recursive_refs: Vec<String>,
 }
+
+// ---------------------------------------------------------------------------
+// Annotation keywords — site-specific values override definition values
+// when $ref has siblings.
+// ---------------------------------------------------------------------------
+const ANNOTATION_KEYWORDS: &[&str] = &[
+    "description",
+    "title",
+    "$comment",
+    "examples",
+    "default",
+    "deprecated",
+    "readOnly",
+    "writeOnly",
+];
 
 /// Apply schema normalization: resolve `$ref`, normalize syntax, detect cycles.
 ///
@@ -35,10 +61,394 @@ pub struct NormalizePassResult {
 ///
 /// A `NormalizePassResult` with the normalized schema and any recursive ref paths.
 pub fn normalize(
-    _schema: &Value,
-    _config: &ConvertOptions,
+    schema: &Value,
+    config: &ConvertOptions,
 ) -> Result<NormalizePassResult, ConvertError> {
-    todo!("Pass 0 implementation")
+    // Phase 1: normalize items array → prefixItems.
+    let mut root = schema.clone();
+    normalize_items_recursive(&mut root);
+
+    // Phase 2: resolve $ref.
+    let frozen_root = root.clone();
+    let mut ctx = RefContext {
+        root: &frozen_root,
+        config,
+        visiting: HashSet::new(),
+        recursive_refs: Vec::new(),
+    };
+    let result = resolve_refs(&root, "#", 0, &mut ctx)?;
+
+    // Phase 3: cleanup.
+    let recursive_refs = ctx.recursive_refs;
+    let result = cleanup(result, &recursive_refs);
+
+    Ok(NormalizePassResult {
+        schema: result,
+        recursive_refs,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1: items array → prefixItems normalization (recursive)
+// ---------------------------------------------------------------------------
+
+fn normalize_items_recursive(value: &mut Value) {
+    let Some(obj) = value.as_object_mut() else {
+        return;
+    };
+
+    // If `items` is an array and `prefixItems` doesn't already exist, rename.
+    if obj.get("items").is_some_and(|v| v.is_array()) {
+        if !obj.contains_key("prefixItems") {
+            if let Some(items) = obj.remove("items") {
+                obj.insert("prefixItems".to_string(), items);
+            }
+        } else {
+            // Both exist — drop the array-form items (redundant in 2020-12).
+            obj.remove("items");
+        }
+    }
+
+    // Recurse into all schema-bearing children.
+    for key in [
+        "properties",
+        "patternProperties",
+        "$defs",
+        "definitions",
+        "dependentSchemas",
+    ] {
+        if let Some(Value::Object(map)) = obj.get_mut(key) {
+            for val in map.values_mut() {
+                normalize_items_recursive(val);
+            }
+        }
+    }
+
+    for key in [
+        "additionalProperties",
+        "unevaluatedProperties",
+        "propertyNames",
+        "unevaluatedItems",
+        "contains",
+        "not",
+        "if",
+        "then",
+        "else",
+        "items",
+    ] {
+        if let Some(child) = obj.get_mut(key) {
+            if child.is_object() {
+                normalize_items_recursive(child);
+            }
+        }
+    }
+
+    for key in ["anyOf", "oneOf", "allOf", "prefixItems"] {
+        if let Some(Value::Array(arr)) = obj.get_mut(key) {
+            for item in arr.iter_mut() {
+                normalize_items_recursive(item);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2: $ref resolution via DFS with cycle detection
+// ---------------------------------------------------------------------------
+
+fn resolve_refs(
+    node: &Value,
+    path: &str,
+    depth: usize,
+    ctx: &mut RefContext<'_>,
+) -> Result<Value, ConvertError> {
+    if depth > ctx.config.max_depth {
+        return Err(ConvertError::RecursionDepthExceeded {
+            path: path.to_string(),
+            max_depth: ctx.config.max_depth,
+        });
+    }
+
+    let Some(obj) = node.as_object() else {
+        return Ok(node.clone());
+    };
+
+    // Check for $ref.
+    if let Some(ref_val) = obj.get("$ref").and_then(Value::as_str) {
+        return resolve_single_ref(obj, ref_val, path, depth, ctx);
+    }
+
+    // No $ref — recurse into children.
+    let mut result = obj.clone();
+    recurse_children(&mut result, path, depth, ctx)?;
+
+    Ok(Value::Object(result))
+}
+
+/// Resolve a single $ref node, handling cycles, siblings, and chained refs.
+#[allow(clippy::too_many_arguments)]
+fn resolve_single_ref(
+    obj: &Map<String, Value>,
+    ref_str: &str,
+    path: &str,
+    depth: usize,
+    ctx: &mut RefContext<'_>,
+) -> Result<Value, ConvertError> {
+    // Reject non-local refs.
+    if !ref_str.starts_with('#') {
+        return Err(ConvertError::UnsupportedFeature {
+            path: path.to_string(),
+            feature: format!("non-local $ref: {}", ref_str),
+        });
+    }
+
+    // Check for cycles.
+    if ctx.visiting.contains(ref_str) {
+        ctx.recursive_refs.push(path.to_string());
+        return Ok(Value::Object(obj.clone()));
+    }
+
+    // Resolve the pointer against the root document.
+    let target =
+        resolve_pointer(ctx.root, ref_str).ok_or_else(|| ConvertError::UnresolvableRef {
+            path: path.to_string(),
+            reference: ref_str.to_string(),
+        })?;
+
+    // Mark as visiting for cycle detection.
+    ctx.visiting.insert(ref_str.to_string());
+
+    // Recursively resolve the target (handles chained refs like A→B→C).
+    let resolved = resolve_refs(&target, path, depth + 1, ctx)?;
+
+    // Unmark after resolution.
+    ctx.visiting.remove(ref_str);
+
+    // Handle sibling keywords alongside $ref.
+    let siblings: Map<String, Value> = obj
+        .iter()
+        .filter(|(k, _)| k.as_str() != "$ref")
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+
+    if siblings.is_empty() {
+        return Ok(resolved);
+    }
+
+    // Split siblings into annotations vs structural.
+    let mut annotations = Map::new();
+    let mut structural = Map::new();
+    for (k, v) in siblings {
+        if ANNOTATION_KEYWORDS.contains(&k.as_str()) {
+            annotations.insert(k, v);
+        } else {
+            structural.insert(k, v);
+        }
+    }
+
+    // Apply annotation overrides onto the resolved definition.
+    let mut merged = match resolved {
+        Value::Object(m) => m,
+        other => {
+            // Resolved to a non-object (e.g., {type: string}) — wrap it.
+            let mut m = Map::new();
+            m.insert("$resolved".to_string(), other);
+            m
+        }
+    };
+
+    for (k, v) in annotations {
+        merged.insert(k, v);
+    }
+
+    if structural.is_empty() {
+        return Ok(Value::Object(merged));
+    }
+
+    // Structural siblings → wrap in allOf for Pass 1 to handle.
+    Ok(Value::Object(Map::from_iter([(
+        "allOf".to_string(),
+        Value::Array(vec![Value::Object(merged), Value::Object(structural)]),
+    )])))
+}
+
+/// Resolve a JSON Pointer against a root document.
+/// Supports paths like `#/$defs/Address`, `#/definitions/Thing`,
+/// `#/$defs/User/properties/address`.
+fn resolve_pointer(root: &Value, pointer: &str) -> Option<Value> {
+    let path = pointer.strip_prefix('#')?;
+    if path.is_empty() {
+        return Some(root.clone());
+    }
+    let path = path.strip_prefix('/')?;
+
+    let mut current = root;
+    for segment in path.split('/') {
+        // Unescape RFC 6901 sequences.
+        let key = segment.replace("~1", "/").replace("~0", "~");
+        match current {
+            Value::Object(obj) => {
+                current = obj.get(&key)?;
+            }
+            Value::Array(arr) => {
+                let idx: usize = key.parse().ok()?;
+                current = arr.get(idx)?;
+            }
+            _ => return None,
+        }
+    }
+
+    Some(current.clone())
+}
+
+/// Recurse into all schema-bearing children of an object.
+fn recurse_children(
+    obj: &mut Map<String, Value>,
+    path: &str,
+    depth: usize,
+    ctx: &mut RefContext<'_>,
+) -> Result<(), ConvertError> {
+    // Map-of-schemas keywords.
+    for key in [
+        "properties",
+        "patternProperties",
+        "$defs",
+        "definitions",
+        "dependentSchemas",
+    ] {
+        if let Some(Value::Object(map)) = obj.remove(key) {
+            let mut new_map = Map::new();
+            for (k, v) in map {
+                let child_path = build_path(path, &[key, &k]);
+                let resolved = resolve_refs(&v, &child_path, depth + 1, ctx)?;
+                new_map.insert(k, resolved);
+            }
+            obj.insert(key.to_string(), Value::Object(new_map));
+        }
+    }
+
+    // Single-schema keywords.
+    for key in [
+        "additionalProperties",
+        "unevaluatedProperties",
+        "propertyNames",
+        "unevaluatedItems",
+        "contains",
+        "not",
+        "if",
+        "then",
+        "else",
+        "items",
+    ] {
+        if let Some(val) = obj.remove(key) {
+            if val.is_object() {
+                let child_path = build_path(path, &[key]);
+                let resolved = resolve_refs(&val, &child_path, depth + 1, ctx)?;
+                obj.insert(key.to_string(), resolved);
+            } else {
+                obj.insert(key.to_string(), val);
+            }
+        }
+    }
+
+    // Array-of-schemas keywords.
+    for key in ["anyOf", "oneOf", "allOf", "prefixItems"] {
+        if let Some(Value::Array(arr)) = obj.remove(key) {
+            let mut new_arr = Vec::with_capacity(arr.len());
+            for (i, item) in arr.into_iter().enumerate() {
+                let child_path = build_path(path, &[key, &i.to_string()]);
+                let resolved = resolve_refs(&item, &child_path, depth + 1, ctx)?;
+                new_arr.push(resolved);
+            }
+            obj.insert(key.to_string(), Value::Array(new_arr));
+        }
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: Cleanup
+// ---------------------------------------------------------------------------
+
+fn cleanup(schema: Value, _recursive_refs: &[String]) -> Value {
+    let Value::Object(mut obj) = schema else {
+        return schema;
+    };
+
+    // Collect which $defs entries are still referenced by remaining $ref
+    // nodes (i.e., the recursive refs that weren't inlined).
+    let referenced_defs = collect_remaining_refs(&Value::Object(obj.clone()));
+
+    // Rename `definitions` → `$defs` if needed.
+    if let Some(Value::Object(def_map)) = obj.remove("definitions") {
+        let defs_entry = obj
+            .entry("$defs")
+            .or_insert_with(|| Value::Object(Map::new()));
+        if let Value::Object(existing_defs) = defs_entry {
+            for (k, v) in def_map {
+                // Don't overwrite existing $defs entries.
+                if !existing_defs.contains_key(&k) {
+                    existing_defs.insert(k, v);
+                }
+            }
+        }
+    }
+
+    // Strip $defs entries that are not referenced by remaining recursive refs.
+    if let Some(Value::Object(defs)) = obj.get_mut("$defs") {
+        let keys_to_remove: Vec<String> = defs
+            .keys()
+            .filter(|k| !referenced_defs.contains(k.as_str()))
+            .cloned()
+            .collect();
+        for k in keys_to_remove {
+            defs.remove(&k);
+        }
+        // If $defs is now empty, remove it entirely.
+        if defs.is_empty() {
+            obj.remove("$defs");
+        }
+    }
+
+    Value::Object(obj)
+}
+
+/// Walk the schema and collect definition names that are still referenced
+/// by remaining `$ref` pointers (i.e., recursive refs that weren't inlined).
+fn collect_remaining_refs(schema: &Value) -> HashSet<String> {
+    let mut refs = HashSet::new();
+    collect_refs_recursive(schema, &mut refs);
+    refs
+}
+
+fn collect_refs_recursive(value: &Value, refs: &mut HashSet<String>) {
+    match value {
+        Value::Object(obj) => {
+            if let Some(ref_val) = obj.get("$ref").and_then(Value::as_str) {
+                // Extract the definition name from the pointer.
+                // e.g., "#/$defs/TreeNode" → "TreeNode"
+                // e.g., "#/definitions/Thing" → "Thing"
+                if let Some(rest) = ref_val
+                    .strip_prefix("#/$defs/")
+                    .or_else(|| ref_val.strip_prefix("#/definitions/"))
+                {
+                    // Take the first segment (the definition name).
+                    let def_name = rest.split('/').next().unwrap_or(rest);
+                    refs.insert(def_name.to_string());
+                }
+            }
+            for v in obj.values() {
+                collect_refs_recursive(v, refs);
+            }
+        }
+        Value::Array(arr) => {
+            for v in arr {
+                collect_refs_recursive(v, refs);
+            }
+        }
+        _ => {}
+    }
 }
 
 // ===========================================================================
@@ -469,10 +879,7 @@ mod tests {
         assert!(output.get("items").is_none());
         assert_eq!(
             output["prefixItems"],
-            json!([
-                { "type": "string" },
-                { "type": "integer" }
-            ])
+            json!([{ "type": "string" }, { "type": "integer" }])
         );
     }
 
