@@ -237,6 +237,17 @@ fn merge_two(
         }
     }
 
+    // Strip any if/then/else that survived from the base schema
+    for kw in &["if", "then", "else"] {
+        if let Some(v) = result.remove(*kw) {
+            dropped.push(DroppedConstraint {
+                path: path.to_string(),
+                constraint: kw.to_string(),
+                value: v,
+            });
+        }
+    }
+
     Ok(Value::Object(result))
 }
 
@@ -332,10 +343,16 @@ fn intersect_type(
     let overlay_types = type_to_set(&overlay_val);
 
     if !base_types.is_empty() && !overlay_types.is_empty() {
-        let intersection: Vec<String> = base_types
-            .iter()
-            .filter(|t| overlay_types.contains(*t))
+        // Normalize: expand "number" to include "integer" for subtype compatibility
+        let base_expanded = expand_number_subtype(&base_types);
+        let overlay_expanded = expand_number_subtype(&overlay_types);
+        let raw_intersection: HashSet<String> = base_expanded
+            .intersection(&overlay_expanded)
             .cloned()
+            .collect();
+        // Narrow back: if both "number" and "integer" survived, keep only "integer"
+        let intersection: Vec<String> = narrow_number_subtype(&raw_intersection)
+            .into_iter()
             .collect();
         if intersection.is_empty() {
             return Err(ConvertError::SchemaError {
@@ -447,7 +464,8 @@ fn merge_additional_properties(
 
     // Both schemas → recursive merge
     if existing.is_object() && overlay_val.is_object() {
-        let merged = merge_two(existing, overlay_val, path, dropped)?;
+        let child_path = format!("{}/additionalProperties", path);
+        let merged = merge_two(existing, overlay_val, &child_path, dropped)?;
         result.insert("additionalProperties".to_string(), merged);
         return Ok(());
     }
@@ -470,7 +488,8 @@ fn merge_items(
     };
 
     if existing.is_object() && overlay_val.is_object() {
-        let merged = merge_two(existing, overlay_val, path, dropped)?;
+        let child_path = format!("{}/items", path);
+        let merged = merge_two(existing, overlay_val, &child_path, dropped)?;
         result.insert("items".to_string(), merged);
     } else {
         // Non-object items: overlay wins
@@ -506,6 +525,24 @@ fn type_to_set(val: &Value) -> HashSet<String> {
             .collect(),
         _ => HashSet::new(),
     }
+}
+
+/// Expand type set: if it contains "number", also include "integer" (subtype).
+fn expand_number_subtype(types: &HashSet<String>) -> HashSet<String> {
+    let mut expanded = types.clone();
+    if expanded.contains("number") {
+        expanded.insert("integer".to_string());
+    }
+    expanded
+}
+
+/// Narrow type set: if both "number" and "integer" are present, keep only "integer".
+fn narrow_number_subtype(types: &HashSet<String>) -> HashSet<String> {
+    let mut narrowed = types.clone();
+    if narrowed.contains("number") && narrowed.contains("integer") {
+        narrowed.remove("number");
+    }
+    narrowed
 }
 
 // ---------------------------------------------------------------------------
@@ -887,5 +924,44 @@ mod tests {
 
         let (output, _) = run(input);
         assert_eq!(output["additionalProperties"], json!({"type": "string"}));
+    }
+
+    // -----------------------------------------------------------------------
+    // 17. Number ∩ [integer, null] — subtype-aware array intersection
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_number_integer_array_intersection() {
+        let input = json!({
+            "allOf": [
+                { "type": "number" },
+                { "type": ["integer", "null"] }
+            ]
+        });
+
+        let (output, _) = run(input);
+        assert_eq!(output["type"], "integer");
+    }
+
+    // -----------------------------------------------------------------------
+    // 18. if/then/else in base (siblings) are stripped
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_if_then_else_base_stripped() {
+        let input = json!({
+            "if": { "properties": { "x": { "const": 1 } } },
+            "then": { "required": ["y"] },
+            "else": { "required": ["z"] },
+            "allOf": [
+                { "type": "object" }
+            ]
+        });
+
+        let (output, dropped) = run(input);
+        assert!(output.get("if").is_none());
+        assert!(output.get("then").is_none());
+        assert!(output.get("else").is_none());
+        assert!(dropped.iter().any(|d| d.constraint == "if"));
+        assert!(dropped.iter().any(|d| d.constraint == "then"));
+        assert!(dropped.iter().any(|d| d.constraint == "else"));
     }
 }
