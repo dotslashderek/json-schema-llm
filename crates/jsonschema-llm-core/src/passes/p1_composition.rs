@@ -143,6 +143,10 @@ fn merge_two(
     path: &str,
     dropped: &mut Vec<DroppedConstraint>,
 ) -> Result<Value, ConvertError> {
+    // Boolean schema `false` is the "impossible" schema — absorbs everything.
+    if base == Value::Bool(false) || overlay == Value::Bool(false) {
+        return Ok(Value::Bool(false));
+    }
     let base_obj = match base {
         Value::Object(m) => m,
         _ => return Ok(overlay),
@@ -169,6 +173,22 @@ fn merge_two(
             // --- Intersection: type ---
             "type" => {
                 intersect_type(&mut result, v, path)?;
+            }
+
+            // --- Conflict: const ---
+            "const" => {
+                if let Some(existing) = result.get("const") {
+                    if *existing != v {
+                        return Err(ConvertError::SchemaError {
+                            path: path.to_string(),
+                            message: format!(
+                                "allOf const conflict: cannot merge {:?} with {:?}",
+                                existing, v
+                            ),
+                        });
+                    }
+                }
+                result.insert("const".to_string(), v);
             }
 
             // --- Concatenate: description ---
@@ -310,8 +330,35 @@ fn intersect_type(
         });
     }
 
-    // If either is an array type or null, do last-wins for now
-    result.insert("type".to_string(), overlay_val);
+    // Handle array-form types: intersect the type sets.
+    let base_types = type_to_set(existing);
+    let overlay_types = type_to_set(&overlay_val);
+
+    if !base_types.is_empty() && !overlay_types.is_empty() {
+        let intersection: Vec<String> = base_types
+            .iter()
+            .filter(|t| overlay_types.contains(*t))
+            .cloned()
+            .collect();
+        if intersection.is_empty() {
+            return Err(ConvertError::SchemaError {
+                path: path.to_string(),
+                message: format!(
+                    "allOf type conflict: no common type between {:?} and {:?}",
+                    base_types, overlay_types
+                ),
+            });
+        }
+        if intersection.len() == 1 {
+            result.insert("type".to_string(), Value::String(intersection[0].clone()));
+        } else {
+            let arr: Vec<Value> = intersection.into_iter().map(Value::String).collect();
+            result.insert("type".to_string(), Value::Array(arr));
+        }
+    } else {
+        // Fallback: overlay wins
+        result.insert("type".to_string(), overlay_val);
+    }
     Ok(())
 }
 
@@ -392,6 +439,15 @@ fn merge_additional_properties(
         return Ok(());
     }
 
+    // Schema + true: keep the stricter schema (true = allow anything)
+    if existing.is_object() && overlay_val == Value::Bool(true) {
+        return Ok(());
+    }
+    if overlay_val.is_object() && existing == Value::Bool(true) {
+        result.insert("additionalProperties".to_string(), overlay_val);
+        return Ok(());
+    }
+
     // Both schemas → recursive merge
     if existing.is_object() && overlay_val.is_object() {
         let merged = merge_two(existing, overlay_val, path, dropped)?;
@@ -399,7 +455,7 @@ fn merge_additional_properties(
         return Ok(());
     }
 
-    // Otherwise overlay wins (true + true, bool + schema, etc.)
+    // Otherwise overlay wins (true + true)
     result.insert("additionalProperties".to_string(), overlay_val);
     Ok(())
 }
@@ -436,6 +492,22 @@ fn type_to_string(val: &Value) -> Option<String> {
         Value::String(s) => Some(s.clone()),
         Value::Array(arr) if arr.len() == 1 => arr[0].as_str().map(String::from),
         _ => None,
+    }
+}
+
+/// Extract all type strings as a set for intersection logic.
+fn type_to_set(val: &Value) -> HashSet<String> {
+    match val {
+        Value::String(s) => {
+            let mut set = HashSet::new();
+            set.insert(s.clone());
+            set
+        }
+        Value::Array(arr) => arr
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect(),
+        _ => HashSet::new(),
     }
 }
 
@@ -723,5 +795,78 @@ mod tests {
 
         assert_eq!(output, input);
         assert!(dropped.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // 12. Boolean schema `false` absorbs everything
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_boolean_false_absorbs() {
+        let input = json!({
+            "allOf": [
+                false,
+                { "type": "object", "properties": { "x": { "type": "string" } } }
+            ]
+        });
+
+        let (output, _) = run(input);
+        assert_eq!(output, json!(false));
+    }
+
+    // -----------------------------------------------------------------------
+    // 13. const conflict → error
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_const_conflict_error() {
+        let input = json!({
+            "allOf": [
+                { "const": "a" },
+                { "const": "b" }
+            ]
+        });
+
+        let config = ConvertOptions::default();
+        let result = compile_composition(&input, &config);
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("const conflict"));
+    }
+
+    // -----------------------------------------------------------------------
+    // 14. AP: true does not overwrite schema
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_ap_true_preserves_schema() {
+        let input = json!({
+            "allOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": { "type": "integer" }
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            ]
+        });
+
+        let (output, _) = run(input);
+        assert_eq!(output["additionalProperties"], json!({"type": "integer"}));
+    }
+
+    // -----------------------------------------------------------------------
+    // 15. Type array intersection: "string" ∩ ["string", "null"] = "string"
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_type_array_intersection() {
+        let input = json!({
+            "allOf": [
+                { "type": "string" },
+                { "type": ["string", "null"] }
+            ]
+        });
+
+        let (output, _) = run(input);
+        assert_eq!(output["type"], "string");
     }
 }
