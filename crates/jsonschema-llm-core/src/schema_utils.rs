@@ -26,7 +26,7 @@ use crate::error::ConvertError;
 /// - `/` → `~1`
 ///
 /// Returns `Cow::Borrowed` when no escaping is needed (the common case).
-pub fn escape_pointer_segment(segment: &str) -> Cow<str> {
+pub fn escape_pointer_segment(segment: &str) -> Cow<'_, str> {
     if segment.contains('~') || segment.contains('/') {
         Cow::Owned(segment.replace('~', "~0").replace('/', "~1"))
     } else {
@@ -59,7 +59,7 @@ pub fn build_path(parent: &str, segments: &[&str]) -> String {
 ///
 /// Order matters: unescape `~1` first to avoid double-unescaping.
 /// Returns `Cow::Borrowed` when no unescaping is needed (the common case).
-pub fn unescape_pointer_segment(segment: &str) -> Cow<str> {
+pub fn unescape_pointer_segment(segment: &str) -> Cow<'_, str> {
     if segment.contains("~0") || segment.contains("~1") {
         Cow::Owned(segment.replace("~1", "/").replace("~0", "~"))
     } else {

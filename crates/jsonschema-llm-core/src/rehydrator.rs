@@ -107,7 +107,11 @@ fn apply_transform(
     if SKIP_PAIR.contains(&segment) {
         tracing::trace!(segment, "skipping schema-structural keyword pair");
         // Skip the keyword and the following segment (e.g. "anyOf" + "0")
-        let skip_to = if rest.is_empty() { rest } else { &rest[1..] };
+        if rest.is_empty() {
+            tracing::trace!(segment, "incomplete schema-structural keyword pair, stopping");
+            return Ok(());
+        }
+        let skip_to = &rest[1..];
 
         // Special case: patternProperties iterates matching object values
         if segment == "patternProperties" {
@@ -463,12 +467,6 @@ fn locate_data_nodes<'a>(
 
     // Schema-structural: skip pair
     if SKIP_PAIR.contains(&segment) {
-        let next_pos = if pos + 1 < segments.len() {
-            pos + 2
-        } else {
-            pos + 1
-        };
-
         if segment == "patternProperties" {
             if let Some(obj) = data.as_object() {
                 // Extract pattern from the next segment; bail with warning if missing
@@ -504,7 +502,7 @@ fn locate_data_nodes<'a>(
                                 locate_data_nodes(
                                     val,
                                     segments,
-                                    next_pos,
+                                    pos + 2, // patternProperties + pattern consumed
                                     child_path,
                                     out,
                                     warnings,
@@ -539,6 +537,12 @@ fn locate_data_nodes<'a>(
             }
             return;
         }
+
+        if pos + 1 >= segments.len() {
+            // Missing pair segment -> stop traversal to avoid incorrect targeting
+            return;
+        }
+        let next_pos = pos + 2;
 
         locate_data_nodes(
             data,
@@ -631,46 +635,94 @@ fn check_constraint(
             }
         }
         "minimum" => {
-            let actual = value.as_f64()?;
-            let bound = expected.as_f64()?;
-            if actual < bound {
-                Some(format!("value {} is less than minimum {}", actual, bound))
+            if let (Some(act), Some(exp)) = (value.as_i64(), expected.as_i64()) {
+                if act < exp {
+                    return Some(format!("value {} is less than minimum {}", act, exp));
+                }
+            } else if let (Some(act), Some(exp)) = (value.as_u64(), expected.as_u64()) {
+                if act < exp {
+                    return Some(format!("value {} is less than minimum {}", act, exp));
+                }
             } else {
-                None
+                let actual = value.as_f64()?;
+                let bound = expected.as_f64()?;
+                if actual < bound {
+                    return Some(format!("value {} is less than minimum {}", actual, bound));
+                }
             }
+            None
         }
         "maximum" => {
-            let actual = value.as_f64()?;
-            let bound = expected.as_f64()?;
-            if actual > bound {
-                Some(format!("value {} exceeds maximum {}", actual, bound))
+            if let (Some(act), Some(exp)) = (value.as_i64(), expected.as_i64()) {
+                if act > exp {
+                    return Some(format!("value {} exceeds maximum {}", act, exp));
+                }
+            } else if let (Some(act), Some(exp)) = (value.as_u64(), expected.as_u64()) {
+                if act > exp {
+                    return Some(format!("value {} exceeds maximum {}", act, exp));
+                }
             } else {
-                None
+                let actual = value.as_f64()?;
+                let bound = expected.as_f64()?;
+                if actual > bound {
+                    return Some(format!("value {} exceeds maximum {}", actual, bound));
+                }
             }
+            None
         }
         "exclusiveMinimum" => {
-            let actual = value.as_f64()?;
-            let bound = expected.as_f64()?;
-            if actual <= bound {
-                Some(format!(
-                    "value {} is not greater than exclusive minimum {}",
-                    actual, bound
-                ))
+            if let (Some(act), Some(exp)) = (value.as_i64(), expected.as_i64()) {
+                if act <= exp {
+                    return Some(format!(
+                        "value {} is not greater than exclusive minimum {}",
+                        act, exp
+                    ));
+                }
+            } else if let (Some(act), Some(exp)) = (value.as_u64(), expected.as_u64()) {
+                if act <= exp {
+                    return Some(format!(
+                        "value {} is not greater than exclusive minimum {}",
+                        act, exp
+                    ));
+                }
             } else {
-                None
+                let actual = value.as_f64()?;
+                let bound = expected.as_f64()?;
+                if actual <= bound {
+                    return Some(format!(
+                        "value {} is not greater than exclusive minimum {}",
+                        actual, bound
+                    ));
+                }
             }
+            None
         }
         "exclusiveMaximum" => {
-            let actual = value.as_f64()?;
-            let bound = expected.as_f64()?;
-            if actual >= bound {
-                Some(format!(
-                    "value {} is not less than exclusive maximum {}",
-                    actual, bound
-                ))
+            if let (Some(act), Some(exp)) = (value.as_i64(), expected.as_i64()) {
+                if act >= exp {
+                    return Some(format!(
+                        "value {} is not less than exclusive maximum {}",
+                        act, exp
+                    ));
+                }
+            } else if let (Some(act), Some(exp)) = (value.as_u64(), expected.as_u64()) {
+                if act >= exp {
+                    return Some(format!(
+                        "value {} is not less than exclusive maximum {}",
+                        act, exp
+                    ));
+                }
             } else {
-                None
+                let actual = value.as_f64()?;
+                let bound = expected.as_f64()?;
+                if actual >= bound {
+                    return Some(format!(
+                        "value {} is not less than exclusive maximum {}",
+                        actual, bound
+                    ));
+                }
             }
+            None
         }
         "minLength" => {
             let s = value.as_str()?;
