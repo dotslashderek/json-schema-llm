@@ -160,9 +160,10 @@ fn wrap_optional_properties(
     };
 
     for key in optional_keys {
-        if let Some(prop_schema) = props.get(key).cloned() {
-            if !is_already_nullable(&prop_schema) {
-                let wrapped = wrap_nullable(prop_schema);
+        if let Some(prop_schema) = props.get(key) {
+            if !is_already_nullable(prop_schema) {
+                // Only clone when we actually need to wrap
+                let wrapped = wrap_nullable(prop_schema.clone());
                 props.insert(key.clone(), wrapped);
             }
             // Always emit transform — rehydrator needs to know null → undefined
@@ -178,28 +179,35 @@ fn wrap_optional_properties(
 ///
 /// Two forms are recognised:
 /// - `type: ["...", "null"]` (type array containing "null")
-/// - `anyOf: [... , {type: "null"}]` (variant list containing null type)
+/// - `anyOf: [... , V]` where V has `type: "null"` or `type: ["null"]`
 fn is_already_nullable(schema: &Value) -> bool {
     if let Some(obj) = schema.as_object() {
         // Check type array form: type: ["string", "null"]
         if let Some(type_val) = obj.get("type") {
-            if let Some(arr) = type_val.as_array() {
-                if arr.iter().any(|t| t.as_str() == Some("null")) {
-                    return true;
-                }
+            if type_contains_null(type_val) {
+                return true;
             }
         }
-        // Check anyOf form: anyOf: [..., {type: "null"}]
+        // Check anyOf form: anyOf: [..., {type: "null"}] or {type: ["null"]}
         if let Some(any_of) = obj.get("anyOf").and_then(Value::as_array) {
             if any_of
                 .iter()
-                .any(|v| v.get("type").and_then(Value::as_str) == Some("null"))
+                .any(|v| v.get("type").map(type_contains_null).unwrap_or(false))
             {
                 return true;
             }
         }
     }
     false
+}
+
+/// Check if a `type` value includes `"null"` — handles both string and array forms.
+fn type_contains_null(type_val: &Value) -> bool {
+    match type_val {
+        Value::String(s) => s == "null",
+        Value::Array(arr) => arr.iter().any(|t| t.as_str() == Some("null")),
+        _ => false,
+    }
 }
 
 /// Wrap a single schema in `anyOf: [schema, {type: null}]`.
@@ -648,5 +656,27 @@ mod tests {
             alias_transform.is_some(),
             "must emit transform even when skipping wrap"
         );
+    }
+
+    #[test]
+    fn test_skip_nullable_anyof_type_array_form() {
+        // anyOf variant uses type: ["null"] (array form) instead of type: "null"
+        let input = json!({
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "tag": {
+                    "anyOf": [
+                        { "type": "string" },
+                        { "type": ["null"] }
+                    ]
+                }
+            },
+            "required": ["name"]
+        });
+        let (schema, _transforms) = run(input);
+        let tag = &schema["properties"]["tag"];
+        let any_of = tag["anyOf"].as_array().unwrap();
+        assert_eq!(any_of.len(), 2, "should not add another null variant");
     }
 }
