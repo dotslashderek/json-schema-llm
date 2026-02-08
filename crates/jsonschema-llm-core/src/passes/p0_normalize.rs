@@ -394,6 +394,17 @@ fn recurse_children(
 // ---------------------------------------------------------------------------
 
 fn cleanup(schema: Value, _recursive_refs: &[String]) -> Value {
+    // Normalize top-level boolean schemas to canonical object form.
+    let schema = match schema {
+        Value::Bool(true) => Value::Object(Map::new()),
+        Value::Bool(false) => {
+            let mut m = Map::new();
+            m.insert("not".to_string(), Value::Object(Map::new()));
+            Value::Object(m)
+        }
+        other => other,
+    };
+
     let Value::Object(mut obj) = schema else {
         return schema;
     };
