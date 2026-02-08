@@ -33,9 +33,10 @@ pub struct DictPassResult {
 
 /// Apply dictionary transpilation to a schema.
 ///
-/// Recursively walks every node. For map-pattern objects, converts them to typed
-/// arrays. For mixed objects, extracts `additionalProperties` into a synthetic
-/// `_additional` property.
+/// Recursively walks schema objects reachable via `properties`, `items`,
+/// `anyOf`/`oneOf`/`allOf`, and `additionalProperties`. For map-pattern objects,
+/// converts them to typed arrays. For mixed objects, extracts
+/// `additionalProperties` into a synthetic `_additional` property.
 ///
 /// Skipped entirely when `config.target == Target::Gemini`.
 pub fn transpile_dictionaries(
@@ -213,6 +214,10 @@ fn extract_additional_properties(
     };
 
     props.insert(property_name.clone(), array_schema);
+
+    // After extracting dynamic entries, seal the parent so additional keys are
+    // only represented via the synthetic property.
+    obj.insert("additionalProperties".to_string(), Value::Bool(false));
 
     // Emit codec entries: first the extraction, then the map-to-array.
     transforms.push(Transform::ExtractAdditionalProperties {
@@ -516,8 +521,8 @@ mod tests {
             json!({"type": "integer"})
         );
 
-        // additionalProperties removed.
-        assert!(output.get("additionalProperties").is_none());
+        // additionalProperties sealed to false after extraction.
+        assert_eq!(output["additionalProperties"], json!(false));
 
         // Two transforms: ExtractAdditionalProperties + MapToArray.
         assert_eq!(transforms.len(), 2);
