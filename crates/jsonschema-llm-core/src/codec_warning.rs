@@ -30,6 +30,11 @@ pub enum WarningKind {
         /// The constraint keyword that was violated (e.g. "pattern", "minimum").
         constraint: String,
     },
+    /// A dropped constraint could not be evaluated (e.g. invalid regex pattern).
+    ConstraintUnevaluable {
+        /// The constraint keyword that could not be evaluated.
+        constraint: String,
+    },
     /// A codec path could not be resolved in the output data.
     PathNotFound,
 }
