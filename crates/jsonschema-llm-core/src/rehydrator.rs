@@ -121,13 +121,13 @@ fn apply_transform(
                             }
                         }
                     }
-                    Err(_) => {
-                        // Invalid regex — fall back to applying to all values
-                        if let Some(obj) = data.as_object_mut() {
-                            for val in obj.values_mut() {
-                                apply_transform(val, skip_to, transform)?;
-                            }
-                        }
+                    Err(e) => {
+                        // Invalid regex — skip transform to avoid unintended mutations
+                        tracing::warn!(
+                            pattern = %pattern,
+                            error = %e,
+                            "invalid patternProperties regex, skipping transform"
+                        );
                     }
                 }
             }
@@ -329,7 +329,7 @@ fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
         warnings.push(Warning {
             data_path: String::new(),
             schema_path: path.clone(),
-            kind: WarningKind::ConstraintViolation {
+            kind: WarningKind::ConstraintUnevaluable {
                 constraint: "pattern".to_string(),
             },
             message: format!(
@@ -345,7 +345,7 @@ fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
             warnings.push(Warning {
                 data_path: String::new(),
                 schema_path: dc.path.clone(),
-                kind: WarningKind::ConstraintViolation {
+                kind: WarningKind::ConstraintUnevaluable {
                     constraint: dc.constraint.clone(),
                 },
                 message: format!(
