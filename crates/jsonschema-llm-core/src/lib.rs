@@ -52,7 +52,8 @@ pub struct ConvertResult {
 /// # Returns
 ///
 /// A `ConvertResult` containing the converted schema and codec.
-pub fn convert(_schema: &Value, _options: &ConvertOptions) -> Result<ConvertResult, ConvertError> {
+pub fn convert(schema: &Value, options: &ConvertOptions) -> Result<ConvertResult, ConvertError> {
+    let _ = (schema, options);
     todo!("Implementation coming soon")
 }
 
@@ -66,6 +67,7 @@ pub fn convert(_schema: &Value, _options: &ConvertOptions) -> Result<ConvertResu
 /// # Returns
 ///
 /// The rehydrated data in the original schema shape.
-pub fn rehydrate(_data: &Value, _codec: &Codec) -> Result<Value, ConvertError> {
+pub fn rehydrate(data: &Value, codec: &Codec) -> Result<Value, ConvertError> {
+    let _ = (data, codec);
     todo!("Implementation coming soon")
 }
