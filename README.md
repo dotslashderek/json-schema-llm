@@ -51,7 +51,7 @@ You're left hand-converting schemas, losing information, and writing custom pars
                       └───────────┘
 ```
 
-No existing tool does this. All prior art (Instructor, Outlines, LangChain) operates at the code/wrapper level, not schema-to-schema. This is a standalone, deterministic transformer.
+This is a standalone, deterministic transformer.
 
 ---
 
