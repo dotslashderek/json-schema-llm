@@ -28,8 +28,8 @@ pub fn rehydrate(data: &Value, codec: &Codec) -> Result<Value, ConvertError> {
                 // No action needed — anyOf data comes back structurally correct
             }
             crate::codec::Transform::ExtractAdditionalProperties { .. } => {
-                // Spread entries from synthetic property back into parent (Issue #5)
-                todo!()
+                // TODO: Spread entries from synthetic property back into parent (Issue #5).
+                // Currently a no-op; the rehydrator does not yet support this transform.
             }
         }
     }
