@@ -1,13 +1,32 @@
 //! Rehydrator — reconstructs original data shape from LLM output using the codec.
+//!
+//! Uses a DataWalker-style path traversal that handles both data-bearing segments
+//! (`properties`, `items`) and schema-structural segments (`anyOf`, `oneOf`, etc.)
+//! which are skipped during data navigation.
+
+use std::collections::HashMap;
+
+use regex::Regex;
+use serde_json::Value;
 
 use crate::codec::{Codec, Transform};
+use crate::codec_warning::{Warning, WarningKind};
 use crate::error::ConvertError;
-use serde_json::Value;
+use crate::schema_utils::split_path;
+
+/// Result of rehydration, including the restored data and any warnings.
+pub struct RehydrateResult {
+    /// The rehydrated data in the original schema shape.
+    pub data: Value,
+    /// Warnings about dropped constraint violations.
+    pub warnings: Vec<Warning>,
+}
 
 /// Rehydrate LLM output using the codec sidecar.
 ///
-/// Applies transforms in REVERSE order (LIFO) to undo the stack of changes.
-pub fn rehydrate(data: &Value, codec: &Codec) -> Result<Value, ConvertError> {
+/// Applies transforms in REVERSE order (LIFO) to undo the stack of changes,
+/// then validates dropped constraints and collects warnings.
+pub fn rehydrate(data: &Value, codec: &Codec) -> Result<RehydrateResult, ConvertError> {
     let mut result = data.clone();
 
     for transform in codec.transforms.iter().rev() {
@@ -19,50 +38,120 @@ pub fn rehydrate(data: &Value, codec: &Codec) -> Result<Value, ConvertError> {
             Transform::ExtractAdditionalProperties { path, .. } => path,
         };
 
-        // Normalize path: split by '/', filter empty and '#'
-        let path_parts: Vec<&str> = path_str
-            .split('/')
-            .filter(|p| !p.is_empty() && *p != "#")
-            .collect();
+        let segments = split_path(path_str);
+        let seg_refs: Vec<&str> = segments.iter().map(|s| s.as_str()).collect();
 
-        apply_transform(&mut result, &path_parts, transform)?;
+        tracing::debug!(path = %path_str, "applying transform");
+        apply_transform(&mut result, &seg_refs, transform)?;
     }
 
-    Ok(result)
+    let warnings = validate_constraints(&result, codec);
+
+    Ok(RehydrateResult {
+        data: result,
+        warnings,
+    })
 }
+
+// ---------------------------------------------------------------------------
+// Schema-path → data navigation (DataWalker)
+// ---------------------------------------------------------------------------
+
+/// Schema-structural keywords that should be skipped (keyword only).
+const SKIP_SINGLE: &[&str] = &[
+    "additionalProperties",
+    "unevaluatedProperties",
+    "unevaluatedItems",
+    "contains",
+    "propertyNames",
+    "not",
+    "if",
+    "then",
+    "else",
+    "prefixItems",
+];
+
+/// Schema-structural keywords that should skip keyword + next segment.
+const SKIP_PAIR: &[&str] = &[
+    "anyOf",
+    "oneOf",
+    "allOf",
+    "$defs",
+    "definitions",
+    "dependentSchemas",
+    "patternProperties",
+];
 
 fn apply_transform(
     data: &mut Value,
     path_parts: &[&str],
     transform: &Transform,
 ) -> Result<(), ConvertError> {
-    // 1. Array Iteration: Handle "items" segment
-    if let Some(&"items") = path_parts.first() {
+    // End of path — execute the transform
+    if path_parts.is_empty() {
+        tracing::trace!("reached end of path, executing transform");
+        return execute_transform(data, transform);
+    }
+
+    let segment = path_parts[0];
+    let rest = &path_parts[1..];
+
+    // 1. Schema-structural: skip keyword only
+    if SKIP_SINGLE.contains(&segment) {
+        tracing::trace!(segment, "skipping schema-structural keyword");
+        return apply_transform(data, rest, transform);
+    }
+
+    // 2. Schema-structural: skip keyword + next segment (index/name)
+    if SKIP_PAIR.contains(&segment) {
+        tracing::trace!(segment, "skipping schema-structural keyword pair");
+        // Skip the keyword and the following segment (e.g. "anyOf" + "0")
+        let skip_to = if rest.is_empty() { rest } else { &rest[1..] };
+
+        // Special case: patternProperties iterates all object values
+        if segment == "patternProperties" {
+            if let Some(obj) = data.as_object_mut() {
+                for val in obj.values_mut() {
+                    apply_transform(val, skip_to, transform)?;
+                }
+            }
+            return Ok(());
+        }
+
+        return apply_transform(data, skip_to, transform);
+    }
+
+    // 3. Array iteration: "items"
+    if segment == "items" {
         if let Some(arr) = data.as_array_mut() {
             for item in arr {
-                apply_transform(item, &path_parts[1..], transform)?;
+                apply_transform(item, rest, transform)?;
             }
         }
-        // Robustness for structural/path mismatches:
-        // If this node is not an array, we skip traversal silently.
-        // Note: value-level transforms (e.g. JsonStringParse) may still return hard errors.
         return Ok(());
     }
 
-    // 2. Object Navigation: Handle "properties" -> "key"
-    if let Some(&"properties") = path_parts.first() {
-        if let Some(key) = path_parts.get(1) {
-            // SPECIAL CASE: NullableOptional
-            // If we are at the parent object and the path targets a child property that is Nullable,
-            // we perform the check here to have access to the parent map for removal.
+    // 4. Numeric index: array[n] for tuple/prefixItems navigation
+    if let Ok(index) = segment.parse::<usize>() {
+        if let Some(arr) = data.as_array_mut() {
+            if let Some(item) = arr.get_mut(index) {
+                return apply_transform(item, rest, transform);
+            }
+        }
+        return Ok(());
+    }
+
+    // 5. Object navigation: "properties" -> "key"
+    if segment == "properties" {
+        if let Some(key) = rest.first() {
+            let remaining = &rest[1..];
+
+            // SPECIAL CASE: NullableOptional at final hop
             if let Transform::NullableOptional {
                 original_required, ..
             } = transform
             {
-                // If this is the last hop (properties/KEY)
-                if path_parts.len() == 2 {
-                    // Only strip null values for properties that were NOT originally required.
-                    // Required properties should keep their null value.
+                if remaining.is_empty() {
                     if !original_required {
                         if let Some(obj) = data.as_object_mut() {
                             if let Some(val) = obj.get(*key) {
@@ -76,38 +165,40 @@ fn apply_transform(
                 }
             }
 
-            // Normal Navigation
+            // Normal navigation into property
             if let Some(obj) = data.as_object_mut() {
-                // If the key exists, recurse. If not, we can't traverse further, so we stop.
                 if let Some(child) = obj.get_mut(*key) {
-                    apply_transform(child, &path_parts[2..], transform)?;
+                    return apply_transform(child, remaining, transform);
                 }
             }
             return Ok(());
         }
     }
 
-    // 3. End of Path - Execute Value Transforms
-    if path_parts.is_empty() {
-        match transform {
-            Transform::MapToArray { key_field, .. } => {
-                restore_map(data, key_field)?;
-            }
-            Transform::JsonStringParse { .. } => {
-                parse_json_string(data)?;
-            }
-            Transform::ExtractAdditionalProperties { property_name, .. } => {
-                restore_additional_properties(data, property_name)?;
-            }
-            Transform::NullableOptional { .. } => {
-                // Should have been handled in the navigation step.
-            }
-            Transform::DiscriminatorAnyOf { .. } => {
-                // No-op
-            }
+    // Unknown segment — skip silently for forward compatibility
+    tracing::trace!(segment, "unknown path segment, skipping");
+    Ok(())
+}
+
+/// Execute a value-level transform at the current data node.
+fn execute_transform(data: &mut Value, transform: &Transform) -> Result<(), ConvertError> {
+    match transform {
+        Transform::MapToArray { key_field, .. } => {
+            restore_map(data, key_field)?;
+        }
+        Transform::JsonStringParse { .. } => {
+            parse_json_string(data)?;
+        }
+        Transform::ExtractAdditionalProperties { property_name, .. } => {
+            restore_additional_properties(data, property_name)?;
+        }
+        Transform::NullableOptional { .. } => {
+            // Handled in the navigation step.
+        }
+        Transform::DiscriminatorAnyOf { .. } => {
+            // No-op
         }
     }
-
     Ok(())
 }
 
@@ -180,6 +271,282 @@ fn restore_additional_properties(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Dropped constraint validation
+// ---------------------------------------------------------------------------
+
+/// Advisory-only constraints where we just warn that they were dropped.
+const ADVISORY_CONSTRAINTS: &[&str] = &["if", "then", "else"];
+
+/// Validate dropped constraints against the rehydrated data.
+///
+/// Pre-compiles regex patterns once, then walks each constraint path
+/// to locate data nodes and check violations.
+fn validate_constraints(data: &Value, codec: &Codec) -> Vec<Warning> {
+    if codec.dropped_constraints.is_empty() {
+        return Vec::new();
+    }
+
+    // Pre-compile regex patterns
+    let mut regex_cache: HashMap<String, Regex> = HashMap::new();
+    for dc in &codec.dropped_constraints {
+        if dc.constraint == "pattern" {
+            if let Some(pat) = dc.value.as_str() {
+                if let Ok(re) = Regex::new(pat) {
+                    regex_cache.insert(pat.to_string(), re);
+                } else {
+                    tracing::warn!(pattern = %pat, "invalid regex pattern in dropped constraint, skipping");
+                }
+            }
+        }
+    }
+
+    let mut warnings = Vec::new();
+
+    for dc in &codec.dropped_constraints {
+        // Advisory constraints — just note they were dropped
+        if ADVISORY_CONSTRAINTS.contains(&dc.constraint.as_str()) {
+            warnings.push(Warning {
+                data_path: String::new(),
+                schema_path: dc.path.clone(),
+                kind: WarningKind::ConstraintViolation {
+                    constraint: dc.constraint.clone(),
+                },
+                message: format!(
+                    "constraint '{}' was dropped during compilation and cannot be validated",
+                    dc.constraint
+                ),
+            });
+            continue;
+        }
+
+        // Locate data nodes for this constraint's path
+        let mut nodes = Vec::new();
+        locate_data_nodes(data, &split_path(&dc.path), 0, String::new(), &mut nodes);
+
+        if nodes.is_empty() {
+            // Path didn't resolve — not necessarily an error (data may be absent)
+            continue;
+        }
+
+        for (data_path, value) in &nodes {
+            if let Some(warning) = check_constraint(value, &dc.constraint, &dc.value, &regex_cache)
+            {
+                warnings.push(Warning {
+                    data_path: if data_path.is_empty() {
+                        "/".to_string()
+                    } else {
+                        data_path.clone()
+                    },
+                    schema_path: dc.path.clone(),
+                    kind: WarningKind::ConstraintViolation {
+                        constraint: dc.constraint.clone(),
+                    },
+                    message: warning,
+                });
+            }
+        }
+    }
+
+    warnings
+}
+
+/// Recursively locate data nodes matching a schema path (read-only).
+///
+/// Collects `(data_path, &Value)` tuples for each data node the schema path resolves to.
+fn locate_data_nodes<'a>(
+    data: &'a Value,
+    segments: &[String],
+    pos: usize,
+    current_data_path: String,
+    out: &mut Vec<(String, &'a Value)>,
+) {
+    if pos >= segments.len() {
+        out.push((current_data_path, data));
+        return;
+    }
+
+    let segment = segments[pos].as_str();
+
+    // Schema-structural: skip single
+    if SKIP_SINGLE.contains(&segment) {
+        locate_data_nodes(data, segments, pos + 1, current_data_path, out);
+        return;
+    }
+
+    // Schema-structural: skip pair
+    if SKIP_PAIR.contains(&segment) {
+        let next_pos = if pos + 1 < segments.len() {
+            pos + 2
+        } else {
+            pos + 1
+        };
+
+        if segment == "patternProperties" {
+            if let Some(obj) = data.as_object() {
+                for (key, val) in obj {
+                    let child_path = format!("{}/{}", current_data_path, key);
+                    locate_data_nodes(val, segments, next_pos, child_path, out);
+                }
+            }
+            return;
+        }
+
+        locate_data_nodes(data, segments, next_pos, current_data_path, out);
+        return;
+    }
+
+    // items → iterate array
+    if segment == "items" {
+        if let Some(arr) = data.as_array() {
+            for (i, item) in arr.iter().enumerate() {
+                let child_path = format!("{}/{}", current_data_path, i);
+                locate_data_nodes(item, segments, pos + 1, child_path, out);
+            }
+        }
+        return;
+    }
+
+    // Numeric index
+    if let Ok(index) = segment.parse::<usize>() {
+        if let Some(arr) = data.as_array() {
+            if let Some(item) = arr.get(index) {
+                let child_path = format!("{}/{}", current_data_path, index);
+                locate_data_nodes(item, segments, pos + 1, child_path, out);
+            }
+        }
+        return;
+    }
+
+    // properties → navigate into object
+    if segment == "properties" {
+        if let Some(key) = segments.get(pos + 1) {
+            if let Some(obj) = data.as_object() {
+                if let Some(child) = obj.get(key.as_str()) {
+                    let child_path = format!("{}/{}", current_data_path, key);
+                    locate_data_nodes(child, segments, pos + 2, child_path, out);
+                }
+            }
+        }
+    }
+}
+
+/// Check a single constraint against a value. Returns `Some(message)` on violation.
+fn check_constraint(
+    value: &Value,
+    constraint: &str,
+    expected: &Value,
+    regex_cache: &HashMap<String, Regex>,
+) -> Option<String> {
+    match constraint {
+        "pattern" => {
+            let s = value.as_str()?;
+            let pat = expected.as_str()?;
+            let re = regex_cache.get(pat)?;
+            if !re.is_match(s) {
+                Some(format!("value {:?} does not match pattern {:?}", s, pat))
+            } else {
+                None
+            }
+        }
+        "minimum" => {
+            let actual = value.as_f64()?;
+            let bound = expected.as_f64()?;
+            if actual < bound {
+                Some(format!("value {} is less than minimum {}", actual, bound))
+            } else {
+                None
+            }
+        }
+        "maximum" => {
+            let actual = value.as_f64()?;
+            let bound = expected.as_f64()?;
+            if actual > bound {
+                Some(format!("value {} exceeds maximum {}", actual, bound))
+            } else {
+                None
+            }
+        }
+        "exclusiveMinimum" => {
+            let actual = value.as_f64()?;
+            let bound = expected.as_f64()?;
+            if actual <= bound {
+                Some(format!(
+                    "value {} is not greater than exclusive minimum {}",
+                    actual, bound
+                ))
+            } else {
+                None
+            }
+        }
+        "exclusiveMaximum" => {
+            let actual = value.as_f64()?;
+            let bound = expected.as_f64()?;
+            if actual >= bound {
+                Some(format!(
+                    "value {} is not less than exclusive maximum {}",
+                    actual, bound
+                ))
+            } else {
+                None
+            }
+        }
+        "minLength" => {
+            let s = value.as_str()?;
+            let bound = expected.as_u64()? as usize;
+            if s.len() < bound {
+                Some(format!(
+                    "string length {} is less than minLength {}",
+                    s.len(),
+                    bound
+                ))
+            } else {
+                None
+            }
+        }
+        "maxLength" => {
+            let s = value.as_str()?;
+            let bound = expected.as_u64()? as usize;
+            if s.len() > bound {
+                Some(format!(
+                    "string length {} exceeds maxLength {}",
+                    s.len(),
+                    bound
+                ))
+            } else {
+                None
+            }
+        }
+        "minItems" => {
+            let arr = value.as_array()?;
+            let bound = expected.as_u64()? as usize;
+            if arr.len() < bound {
+                Some(format!(
+                    "array length {} is less than minItems {}",
+                    arr.len(),
+                    bound
+                ))
+            } else {
+                None
+            }
+        }
+        "maxItems" => {
+            let arr = value.as_array()?;
+            let bound = expected.as_u64()? as usize;
+            if arr.len() > bound {
+                Some(format!(
+                    "array length {} exceeds maxItems {}",
+                    arr.len(),
+                    bound
+                ))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,7 +567,7 @@ mod tests {
             "optional": null
         });
         let result = rehydrate(&data, &codec).unwrap();
-        assert_eq!(result, json!({"fixed": 1}));
+        assert_eq!(result.data, json!({"fixed": 1}));
 
         // Case B: Present value -> should be kept
         let data_present = json!({
@@ -208,7 +575,7 @@ mod tests {
             "optional": "kept"
         });
         let result_present = rehydrate(&data_present, &codec).unwrap();
-        assert_eq!(result_present, json!({"fixed": 1, "optional": "kept"}));
+        assert_eq!(result_present.data, json!({"fixed": 1, "optional": "kept"}));
     }
 
     // Test 2: Restore Map
@@ -229,7 +596,7 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(
-            result,
+            result.data,
             json!({
                 "map": {"a": 1, "b": 2}
             })
@@ -250,7 +617,7 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(
-            result,
+            result.data,
             json!({
                 "config": {"debug": true}
             })
@@ -296,7 +663,7 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(
-            result,
+            result.data,
             json!({
                 "map": {"a": 1}
             })
@@ -319,8 +686,8 @@ mod tests {
         });
 
         let result = rehydrate(&data, &codec).unwrap();
-        assert_eq!(result["list"][0]["data"], json!({"id": 1}));
-        assert_eq!(result["list"][1]["data"], json!({"id": 2}));
+        assert_eq!(result.data["list"][0]["data"], json!({"id": 1}));
+        assert_eq!(result.data["list"][1]["data"], json!({"id": 2}));
     }
 
     // Test 7: Extract Additional Properties
@@ -346,7 +713,7 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(
-            result,
+            result.data,
             json!({
                 "fixed": "keep",
                 "dynamic1": 100,
@@ -361,7 +728,7 @@ mod tests {
         let codec = Codec::new();
         let data = json!({"a": 1});
         let result = rehydrate(&data, &codec).unwrap();
-        assert_eq!(result, data);
+        assert_eq!(result.data, data);
     }
 
     // Test 9: Restore map with duplicate keys — last wins
@@ -382,7 +749,7 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         // Last wins semantics
-        assert_eq!(result["map"]["dup"], json!(2));
+        assert_eq!(result.data["map"]["dup"], json!(2));
     }
 
     // Test 10: Nested transforms at different depths
@@ -405,8 +772,8 @@ mod tests {
         });
 
         let result = rehydrate(&data, &codec).unwrap();
-        assert!(result["outer"].get("inner").is_none());
-        assert_eq!(result["outer"]["config"], json!({"x": 1}));
+        assert!(result.data["outer"].get("inner").is_none());
+        assert_eq!(result.data["outer"]["config"], json!({"x": 1}));
     }
 
     // Test 11: Malformed map entries — preserve original array
@@ -428,8 +795,8 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         // Original array preserved, not partially converted
-        assert!(result["map"].is_array());
-        assert_eq!(result["map"].as_array().unwrap().len(), 2);
+        assert!(result.data["map"].is_array());
+        assert_eq!(result.data["map"].as_array().unwrap().len(), 2);
     }
 
     // Test 12: Non-object extra property — preserve original value
@@ -450,8 +817,8 @@ mod tests {
         });
 
         let result = rehydrate(&data, &codec).unwrap();
-        assert_eq!(result["_extra"], json!("not an object"));
-        assert_eq!(result["fixed"], json!("keep"));
+        assert_eq!(result.data["_extra"], json!("not an object"));
+        assert_eq!(result.data["fixed"], json!("keep"));
     }
 
     // Test 13: Originally required nullable keeps null value
@@ -470,7 +837,239 @@ mod tests {
 
         let result = rehydrate(&data, &codec).unwrap();
         // Required field should keep its null value
-        assert_eq!(result["required_field"], json!(null));
-        assert_eq!(result["other"], json!(1));
+        assert_eq!(result.data["required_field"], json!(null));
+        assert_eq!(result.data["other"], json!(1));
+    }
+
+    // --- Composition path traversal tests ---
+
+    // Test 14: Transform through anyOf/0
+    #[test]
+    fn test_anyof_skip() {
+        let mut codec = Codec::new();
+        codec.transforms.push(Transform::JsonStringParse {
+            path: "#/anyOf/0/properties/config".to_string(),
+        });
+
+        let data = json!({
+            "config": "{\"a\": 1}"
+        });
+
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.data, json!({"config": {"a": 1}}));
+    }
+
+    // Test 15: Transform through oneOf/1/items
+    #[test]
+    fn test_oneof_items_skip() {
+        let mut codec = Codec::new();
+        codec.transforms.push(Transform::JsonStringParse {
+            path: "#/properties/list/oneOf/1/items/properties/data".to_string(),
+        });
+
+        let data = json!({
+            "list": [
+                {"data": "{\"x\": true}"},
+                {"data": "{\"x\": false}"}
+            ]
+        });
+
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.data["list"][0]["data"], json!({"x": true}));
+        assert_eq!(result.data["list"][1]["data"], json!({"x": false}));
+    }
+
+    // Test 16: Numeric index for tuple/prefixItems
+    #[test]
+    fn test_numeric_index() {
+        let mut codec = Codec::new();
+        codec.transforms.push(Transform::JsonStringParse {
+            path: "#/prefixItems/1/properties/config".to_string(),
+        });
+
+        let data = json!([
+            {"config": "kept as string"},
+            {"config": "{\"parsed\": true}"}
+        ]);
+
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.data[0]["config"], json!("kept as string"));
+        assert_eq!(result.data[1]["config"], json!({"parsed": true}));
+    }
+
+    // Test 17: RFC 6901 escaped key in path
+    #[test]
+    fn test_rfc6901_escaped_key() {
+        let mut codec = Codec::new();
+        codec.transforms.push(Transform::NullableOptional {
+            path: "#/properties/a~1b".to_string(), // a/b
+            original_required: false,
+        });
+
+        let data = json!({
+            "a/b": null,
+            "other": 1
+        });
+
+        let result = rehydrate(&data, &codec).unwrap();
+        assert!(result.data.get("a/b").is_none());
+        assert_eq!(result.data["other"], json!(1));
+    }
+
+    // --- Dropped constraint validation tests ---
+
+    // Test 18: Pattern violation warning
+    #[test]
+    fn test_pattern_violation_warning() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/email".to_string(),
+            constraint: "pattern".to_string(),
+            value: json!("^[a-z]+@[a-z]+\\.[a-z]+$"),
+        });
+
+        let data = json!({"email": "NOT_AN_EMAIL"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].data_path, "/email");
+        assert!(result.warnings[0]
+            .message
+            .contains("does not match pattern"));
+    }
+
+    // Test 19: Pattern match — no warning
+    #[test]
+    fn test_pattern_match_no_warning() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/email".to_string(),
+            constraint: "pattern".to_string(),
+            value: json!("^[a-z]+@[a-z]+\\.[a-z]+$"),
+        });
+
+        let data = json!({"email": "test@example.com"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert!(result.warnings.is_empty());
+    }
+
+    // Test 20: Numeric bounds warning
+    #[test]
+    fn test_minimum_violation_warning() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/age".to_string(),
+            constraint: "minimum".to_string(),
+            value: json!(18),
+        });
+
+        let data = json!({"age": 15});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].message.contains("less than minimum"));
+    }
+
+    // Test 21: Maximum pass — no warning
+    #[test]
+    fn test_maximum_pass_no_warning() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/score".to_string(),
+            constraint: "maximum".to_string(),
+            value: json!(100),
+        });
+
+        let data = json!({"score": 99});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert!(result.warnings.is_empty());
+    }
+
+    // Test 22: maxLength violation
+    #[test]
+    fn test_maxlength_warning() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/name".to_string(),
+            constraint: "maxLength".to_string(),
+            value: json!(3),
+        });
+
+        let data = json!({"name": "toolong"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].message.contains("exceeds maxLength"));
+    }
+
+    // Test 23: Advisory if/then/else warning
+    #[test]
+    fn test_advisory_warning() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#".to_string(),
+            constraint: "if".to_string(),
+            value: json!({"properties": {"type": {"const": "premium"}}}),
+        });
+
+        let data = json!({"type": "premium"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0]
+            .message
+            .contains("dropped during compilation"));
+    }
+
+    // Test 24: Warning data path through array items
+    #[test]
+    fn test_warning_data_path_in_array() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/users/items/properties/email".to_string(),
+            constraint: "pattern".to_string(),
+            value: json!("^.+@.+$"),
+        });
+
+        let data = json!({
+            "users": [
+                {"email": "good@test.com"},
+                {"email": "bad"},
+                {"email": "also@ok.net"}
+            ]
+        });
+
+        let result = rehydrate(&data, &codec).unwrap();
+        // Only users/1/email should fail
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].data_path, "/users/1/email");
+    }
+
+    // Test 25: Empty codec → no warnings
+    #[test]
+    fn test_no_constraints_no_warnings() {
+        let codec = Codec::new();
+        let data = json!({"any": "data"});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert!(result.warnings.is_empty());
+    }
+
+    // Test 26: Constraint on missing data → no warning
+    #[test]
+    fn test_constraint_on_missing_data() {
+        use crate::codec::DroppedConstraint;
+        let mut codec = Codec::new();
+        codec.dropped_constraints.push(DroppedConstraint {
+            path: "#/properties/nonexistent".to_string(),
+            constraint: "minimum".to_string(),
+            value: json!(5),
+        });
+
+        let data = json!({"other": 1});
+        let result = rehydrate(&data, &codec).unwrap();
+        assert!(result.warnings.is_empty());
     }
 }
