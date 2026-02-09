@@ -36,7 +36,7 @@ use serde_json::Value;
 pub use codec::Codec;
 pub use codec_warning::Warning;
 pub use config::{ConvertOptions, PolymorphismStrategy, Target};
-pub use error::ConvertError;
+pub use error::{ConvertError, ErrorCode};
 pub use rehydrator::RehydrateResult;
 pub use schema_utils::{build_path, escape_pointer_segment, split_path, unescape_pointer_segment};
 
@@ -146,4 +146,62 @@ pub fn convert(schema: &Value, options: &ConvertOptions) -> Result<ConvertResult
 /// ```
 pub fn rehydrate(data: &Value, codec: &Codec) -> Result<RehydrateResult, ConvertError> {
     rehydrator::rehydrate(data, codec)
+}
+
+// ---------------------------------------------------------------------------
+// JSON-String Bridge API (FFI surface)
+// ---------------------------------------------------------------------------
+
+/// Format a `ConvertError` as a JSON string for FFI consumers.
+fn err_json(e: ConvertError) -> String {
+    e.to_json().to_string()
+}
+
+/// Convert a JSON Schema (as a JSON string) with options (as a JSON string).
+///
+/// This is the FFI-friendly entry point — accepts and returns plain JSON strings.
+/// The typed [`convert`] API remains available for Rust consumers.
+///
+/// # Arguments
+///
+/// * `schema_json` — A JSON Schema document as a string
+/// * `options_json` — Conversion options as a JSON string. Fields use `kebab-case`
+///   naming (e.g. `"max-depth"`, `"recursion-limit"`). Numeric options (`max_depth`,
+///   `recursion_limit`) are deserialized as `usize`; values exceeding the platform's
+///   pointer width will produce a deserialization error.
+///
+/// # Returns
+///
+/// * `Ok(String)` — `{"schema": {...}, "codec": {...}}`
+/// * `Err(String)` — `{"code": "...", "message": "...", "path": ...}`
+pub fn convert_json(schema_json: &str, options_json: &str) -> Result<String, String> {
+    let schema: Value =
+        serde_json::from_str(schema_json).map_err(|e| err_json(ConvertError::JsonError(e)))?;
+    let options: ConvertOptions =
+        serde_json::from_str(options_json).map_err(|e| err_json(ConvertError::JsonError(e)))?;
+    let result = convert(&schema, &options).map_err(err_json)?;
+    serde_json::to_string(&result).map_err(|e| err_json(ConvertError::JsonError(e)))
+}
+
+/// Rehydrate LLM output (as a JSON string) using a codec (as a JSON string).
+///
+/// This is the FFI-friendly entry point — accepts and returns plain JSON strings.
+/// The typed [`rehydrate`] API remains available for Rust consumers.
+///
+/// # Arguments
+///
+/// * `data_json` — The LLM-generated JSON data as a string
+/// * `codec_json` — The codec sidecar (from a prior conversion) as a JSON string
+///
+/// # Returns
+///
+/// * `Ok(String)` — `{"data": {...}, "warnings": [...]}`
+/// * `Err(String)` — `{"code": "...", "message": "...", "path": ...}`
+pub fn rehydrate_json(data_json: &str, codec_json: &str) -> Result<String, String> {
+    let data: Value =
+        serde_json::from_str(data_json).map_err(|e| err_json(ConvertError::JsonError(e)))?;
+    let codec: Codec =
+        serde_json::from_str(codec_json).map_err(|e| err_json(ConvertError::JsonError(e)))?;
+    let result = rehydrate(&data, &codec).map_err(err_json)?;
+    serde_json::to_string(&result).map_err(|e| err_json(ConvertError::JsonError(e)))
 }
