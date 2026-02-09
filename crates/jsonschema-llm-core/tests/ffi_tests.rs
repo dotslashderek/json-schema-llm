@@ -2,9 +2,7 @@
 //!
 //! These tests are written FIRST (TDD gate) before any implementation.
 
-use jsonschema_llm_core::{
-    convert, convert_json, rehydrate_json, ConvertError, ConvertOptions, ErrorCode,
-};
+use jsonschema_llm_core::{convert_json, rehydrate_json, ConvertError, ErrorCode};
 
 // ---------------------------------------------------------------------------
 // Issue #51 — Error Code Mapping

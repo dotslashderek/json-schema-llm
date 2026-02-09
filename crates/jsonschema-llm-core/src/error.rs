@@ -11,7 +11,7 @@ use thiserror::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ErrorCode {
-    /// JSON parsing failed (malformed input).
+    /// JSON parse or deserialization error (malformed input or invalid structure).
     JsonParseError,
     /// Schema structure error (invalid or unsupported schema construct).
     SchemaError,

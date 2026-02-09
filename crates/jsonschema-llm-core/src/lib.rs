@@ -162,8 +162,8 @@ pub fn rehydrate(data: &Value, codec: &Codec) -> Result<RehydrateResult, Convert
 /// * `schema_json` — A JSON Schema document as a string
 /// * `options_json` — Conversion options as a JSON string. Fields use `kebab-case`
 ///   naming (e.g. `"max-depth"`, `"recursion-limit"`). Numeric options (`max_depth`,
-///   `recursion_limit`) must fit within `u32` range; values exceeding this will
-///   produce a deserialization error.
+///   `recursion_limit`) are deserialized as `usize`; values exceeding the platform's
+///   pointer width will produce a deserialization error.
 ///
 /// # Returns
 ///
