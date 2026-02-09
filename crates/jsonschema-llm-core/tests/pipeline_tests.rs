@@ -1,9 +1,9 @@
 //! Integration tests for the `convert()` pipeline — exercises the full 8-pass chain
 //! via the public API only, never calling individual passes directly.
 
-use jsonschema_llm_core::{convert, rehydrate, ConvertOptions, Target};
-use jsonschema_llm_core::config::PolymorphismStrategy;
 use jsonschema_llm_core::codec::Transform;
+use jsonschema_llm_core::config::PolymorphismStrategy;
+use jsonschema_llm_core::{convert, rehydrate, ConvertOptions, Target};
 use serde_json::json;
 
 fn openai_options() -> ConvertOptions {
@@ -34,12 +34,16 @@ fn test_convert_simple_schema() {
 
     // Strict mode: additionalProperties: false, all props required,
     // optional `age` wrapped as anyOf [type, null]
-    let props = result.schema["properties"].as_object().expect("should have properties");
+    let props = result.schema["properties"]
+        .as_object()
+        .expect("should have properties");
     assert!(props.contains_key("name"));
     assert!(props.contains_key("age"));
     assert_eq!(result.schema["additionalProperties"], json!(false));
 
-    let required = result.schema["required"].as_array().expect("should have required");
+    let required = result.schema["required"]
+        .as_array()
+        .expect("should have required");
     assert!(required.contains(&json!("name")));
     assert!(required.contains(&json!("age")));
 }
@@ -68,7 +72,11 @@ fn test_convert_with_map() {
 
     // Codec should contain a MapToArray transform
     assert!(
-        result.codec.transforms.iter().any(|t| matches!(t, Transform::MapToArray { .. })),
+        result
+            .codec
+            .transforms
+            .iter()
+            .any(|t| matches!(t, Transform::MapToArray { .. })),
         "codec should contain MapToArray transform"
     );
 }
@@ -92,7 +100,11 @@ fn test_convert_with_opaque() {
     // After strict wrapping, the type should ultimately be string (or anyOf wrapping string)
     // The key thing is that a JsonStringParse transform exists
     assert!(
-        result.codec.transforms.iter().any(|t| matches!(t, Transform::JsonStringParse { .. })),
+        result
+            .codec
+            .transforms
+            .iter()
+            .any(|t| matches!(t, Transform::JsonStringParse { .. })),
         "codec should contain JsonStringParse transform for opaque object"
     );
 }
@@ -123,10 +135,15 @@ fn test_convert_with_allof() {
     let result = convert(&schema, &openai_options()).expect("convert should succeed");
 
     // allOf should be merged into a flat object with both id and name
-    let props = result.schema["properties"].as_object().expect("should have properties");
+    let props = result.schema["properties"]
+        .as_object()
+        .expect("should have properties");
     assert!(props.contains_key("id"), "merged should have 'id'");
     assert!(props.contains_key("name"), "merged should have 'name'");
-    assert!(result.schema.get("allOf").is_none(), "allOf should be removed after merge");
+    assert!(
+        result.schema.get("allOf").is_none(),
+        "allOf should be removed after merge"
+    );
 }
 
 // ── oneOf → anyOf Polymorphism ──────────────────────────────────────────────
@@ -143,8 +160,14 @@ fn test_convert_with_oneof() {
     let result = convert(&schema, &openai_options()).expect("convert should succeed");
 
     // oneOf should be rewritten to anyOf for OpenAI
-    assert!(result.schema.get("oneOf").is_none(), "oneOf should be removed");
-    assert!(result.schema.get("anyOf").is_some(), "anyOf should be present");
+    assert!(
+        result.schema.get("oneOf").is_none(),
+        "oneOf should be removed"
+    );
+    assert!(
+        result.schema.get("anyOf").is_some(),
+        "anyOf should be present"
+    );
 }
 
 // ── $ref Resolution ─────────────────────────────────────────────────────────
@@ -173,7 +196,8 @@ fn test_convert_with_refs() {
 
     // $ref should be inlined — the address property should have actual properties
     let address = &result.schema["properties"]["address"];
-    let addr_props = address["properties"].as_object()
+    let addr_props = address["properties"]
+        .as_object()
         .expect("address should have inlined properties");
     assert!(addr_props.contains_key("street"));
     assert!(addr_props.contains_key("city"));
@@ -274,11 +298,19 @@ fn test_gemini_skips_passes() {
 
     // Gemini skips Pass 3 (dictionary) — tags should NOT be transpiled to array
     let tags = &result.schema["properties"]["tags"];
-    assert_ne!(tags["type"], json!("array"), "Gemini should not transpile maps");
+    assert_ne!(
+        tags["type"],
+        json!("array"),
+        "Gemini should not transpile maps"
+    );
 
     // Gemini skips dictionary pass so no MapToArray transforms
     assert!(
-        !result.codec.transforms.iter().any(|t| matches!(t, Transform::MapToArray { .. })),
+        !result
+            .codec
+            .transforms
+            .iter()
+            .any(|t| matches!(t, Transform::MapToArray { .. })),
         "Gemini should have no MapToArray transforms"
     );
 }

@@ -13,8 +13,10 @@ path = "src/main.rs"
 [dependencies]
 jsonschema-llm-core = { path = "../crates/jsonschema-llm-core" }
 clap = { version = "4", features = ["derive"] }
+serde = "1"
 serde_json = "1"
 anyhow = "1"
+tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
