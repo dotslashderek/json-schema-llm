@@ -43,7 +43,7 @@ jobs:
       - name: Run tests
         run: |
           echo "::group::Unit & Integration Tests"
-          cargo test --workspace --lib --bins --tests
+          cargo test --workspace --all-targets
           echo "::endgroup::"
 
           echo "::group::Doc Tests"
