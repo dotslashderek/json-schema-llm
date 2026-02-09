@@ -56,3 +56,29 @@ jobs:
       - name: Verify benchmarks compile (Ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         run: cargo bench --workspace --no-run
+
+  wasm:
+    name: WASM Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Cache cargo registry & build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Verify core compiles for wasm32
+        run: cargo check -p jsonschema-llm-core --target wasm32-unknown-unknown
+
+      - name: Build WASM (nodejs)
+        run: wasm-pack build crates/jsonschema-llm-wasm --target nodejs
+
+      - name: Build WASM (web)
+        run: wasm-pack build crates/jsonschema-llm-wasm --target web

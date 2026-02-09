@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/jsonschema-llm-core",
+    "crates/jsonschema-llm-wasm",
     "cli",
 ]
 resolver = "2"
