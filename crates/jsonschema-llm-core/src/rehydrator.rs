@@ -368,7 +368,11 @@ const ADVISORY_CONSTRAINTS: &[&str] = &["if", "then", "else"];
 ///
 /// Uses the pre-compiled regex cache for pattern matching. Walks each
 /// constraint path to locate data nodes and check violations.
-fn validate_constraints(data: &Value, codec: &Codec, regex_cache: &HashMap<String, Regex>) -> Vec<Warning> {
+fn validate_constraints(
+    data: &Value,
+    codec: &Codec,
+    regex_cache: &HashMap<String, Regex>,
+) -> Vec<Warning> {
     if codec.dropped_constraints.is_empty() {
         return Vec::new();
     }
@@ -455,8 +459,7 @@ fn validate_constraints(data: &Value, codec: &Codec, regex_cache: &HashMap<Strin
         }
 
         for (data_path, value) in &nodes {
-            if let Some(warning) = check_constraint(value, &dc.constraint, &dc.value, regex_cache)
-            {
+            if let Some(warning) = check_constraint(value, &dc.constraint, &dc.value, regex_cache) {
                 warnings.push(Warning {
                     data_path: if data_path.is_empty() {
                         "/".to_string()
@@ -481,6 +484,7 @@ fn validate_constraints(data: &Value, codec: &Codec, regex_cache: &HashMap<Strin
 /// Collects `(data_path, &Value)` tuples for each data node the schema path resolves to.
 /// When `warnings` is provided, path-resolution issues (e.g. invalid regex) are surfaced
 /// as `ConstraintUnevaluable` warnings rather than silently skipped.
+#[allow(clippy::too_many_arguments)]
 fn locate_data_nodes<'a>(
     data: &'a Value,
     segments: &[String],
@@ -541,11 +545,8 @@ fn locate_data_nodes<'a>(
                 if let Some(re) = regex_cache.get(pattern) {
                     for (key, val) in obj {
                         if re.is_match(key) {
-                            let child_path = format!(
-                                "{}/{}",
-                                current_data_path,
-                                escape_pointer_segment(key)
-                            );
+                            let child_path =
+                                format!("{}/{}", current_data_path, escape_pointer_segment(key));
                             locate_data_nodes(
                                 val,
                                 segments,

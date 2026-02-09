@@ -169,7 +169,10 @@ fn test_e2e_fixture_codec_entry_counts() {
         .iter()
         .filter(|t| matches!(t, Transform::MapToArray { .. }))
         .count();
-    assert_eq!(map_count, 4, "maps fixture should have exactly 4 MapToArray transforms");
+    assert_eq!(
+        map_count, 4,
+        "maps fixture should have exactly 4 MapToArray transforms"
+    );
 
     // opaque.json must contain exactly 3 JsonStringParse transforms
     let opaque_result = convert(&load_fixture("opaque"), &openai_options()).unwrap();
@@ -179,7 +182,10 @@ fn test_e2e_fixture_codec_entry_counts() {
         .iter()
         .filter(|t| matches!(t, Transform::JsonStringParse { .. }))
         .count();
-    assert_eq!(jsp_count, 3, "opaque fixture should have exactly 3 JsonStringParse transforms");
+    assert_eq!(
+        jsp_count, 3,
+        "opaque fixture should have exactly 3 JsonStringParse transforms"
+    );
 }
 
 // 5. Kitchen sink full roundtrip
