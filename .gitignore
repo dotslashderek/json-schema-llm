@@ -24,6 +24,9 @@ dist/
 *.tgz
 bindings/typescript/pkg/
 
+# WASM build output
+crates/jsonschema-llm-wasm/pkg/
+
 # Python bindings
 __pycache__/
 *.pyc
