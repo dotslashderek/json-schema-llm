@@ -52,3 +52,7 @@ jobs:
 
       - name: Build release binary
         run: cargo build --release
+
+      - name: Verify benchmarks compile (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo bench --workspace --no-run
