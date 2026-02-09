@@ -372,7 +372,7 @@ fn test_golden_snapshot_kitchen_sink_openai() {
     .unwrap();
     assert_eq!(
         result.schema, expected_schema,
-        "kitchen_sink schema output diverged from golden snapshot — if this is intentional, regenerate with: cargo run -- convert tests/schemas/kitchen_sink.json -o tests/snapshots/kitchen_sink_openai.expected.json --target openai-strict"
+        "kitchen_sink schema output diverged from golden snapshot — if this is intentional, regenerate with: cargo run -p jsonschema-llm -- convert tests/schemas/kitchen_sink.json -o tests/snapshots/kitchen_sink_openai.expected.json --target openai-strict"
     );
 
     // Compare codec output
@@ -384,6 +384,6 @@ fn test_golden_snapshot_kitchen_sink_openai() {
     let actual_codec = serde_json::to_value(&result.codec).unwrap();
     assert_eq!(
         actual_codec, expected_codec,
-        "kitchen_sink codec output diverged from golden snapshot — if this is intentional, regenerate with: cargo run -- convert tests/schemas/kitchen_sink.json --codec tests/snapshots/kitchen_sink_codec.expected.json --target openai-strict"
+        "kitchen_sink codec output diverged from golden snapshot — if this is intentional, regenerate with: cargo run -p jsonschema-llm -- convert tests/schemas/kitchen_sink.json --codec tests/snapshots/kitchen_sink_codec.expected.json --target openai-strict"
     );
 }
