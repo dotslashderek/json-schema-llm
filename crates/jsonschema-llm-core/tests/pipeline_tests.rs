@@ -387,3 +387,167 @@ fn test_golden_snapshot_kitchen_sink_openai() {
         "kitchen_sink codec output diverged from golden snapshot — if this is intentional, regenerate with: cargo run -p jsonschema-llm -- convert tests/schemas/kitchen_sink.json --codec tests/snapshots/kitchen_sink_codec.expected.json --target openai-strict"
     );
 }
+
+// ── Mode Flag: Strict vs Permissive ─────────────────────────────────────────
+
+#[test]
+fn test_strict_mode_applies_p6() {
+    // Default mode is Strict — p6 should seal objects
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "integer" }
+        },
+        "required": ["name"]
+    });
+
+    let result = convert(&schema, &openai_options()).expect("convert should succeed");
+
+    // Strict mode: additionalProperties: false, all props required
+    assert_eq!(
+        result.schema["additionalProperties"],
+        json!(false),
+        "Strict mode should seal with additionalProperties: false"
+    );
+    let required = result.schema["required"].as_array().unwrap();
+    assert!(required.contains(&json!("name")));
+    assert!(
+        required.contains(&json!("age")),
+        "Strict mode should make all properties required"
+    );
+}
+
+#[test]
+fn test_permissive_mode_skips_p6() {
+    use jsonschema_llm_core::Mode;
+
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "integer" }
+        },
+        "required": ["name"]
+    });
+
+    let options = ConvertOptions {
+        mode: Mode::Permissive,
+        ..openai_options()
+    };
+
+    let result = convert(&schema, &options).expect("convert should succeed");
+
+    // Permissive mode: p6 skipped — additionalProperties NOT forced to false
+    assert!(
+        result.schema.get("additionalProperties").is_none()
+            || result.schema["additionalProperties"] != json!(false),
+        "Permissive mode should NOT seal with additionalProperties: false"
+    );
+
+    // Original required array preserved (not expanded to include all props)
+    let required = result.schema["required"].as_array().unwrap();
+    assert_eq!(
+        required.len(),
+        1,
+        "Permissive mode should keep original required array"
+    );
+    assert!(required.contains(&json!("name")));
+}
+
+#[test]
+fn test_permissive_mode_still_runs_constraint_pruning() {
+    use jsonschema_llm_core::Mode;
+
+    // Even in permissive mode, p7 (constraint pruning) should still run
+    let schema = json!({
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+    });
+
+    let options = ConvertOptions {
+        mode: Mode::Permissive,
+        ..openai_options()
+    };
+
+    let result = convert(&schema, &options).expect("convert should succeed");
+
+    // Constraints should still be pruned for OpenAI target
+    assert!(
+        result.schema.get("minimum").is_none(),
+        "Permissive mode should still prune unsupported constraints"
+    );
+    assert!(result.schema.get("maximum").is_none());
+}
+
+// ── Provider Compat Pass ────────────────────────────────────────────────────
+
+#[test]
+fn test_provider_compat_empty_for_valid_schema() {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" }
+        },
+        "required": ["name"]
+    });
+
+    let result = convert(&schema, &openai_options()).expect("convert should succeed");
+
+    assert!(
+        result.provider_compat_errors.is_empty(),
+        "Valid object-rooted schema should have no provider compat errors"
+    );
+}
+
+#[test]
+fn test_provider_compat_skips_for_gemini() {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" }
+        }
+    });
+
+    let result = convert(&schema, &gemini_options()).expect("convert should succeed");
+
+    assert!(
+        result.provider_compat_errors.is_empty(),
+        "Gemini target should always have empty provider compat errors"
+    );
+}
+
+#[test]
+fn test_provider_compat_skips_for_permissive_mode() {
+    use jsonschema_llm_core::Mode;
+
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" }
+        }
+    });
+
+    let options = ConvertOptions {
+        mode: Mode::Permissive,
+        ..openai_options()
+    };
+
+    let result = convert(&schema, &options).expect("convert should succeed");
+
+    assert!(
+        result.provider_compat_errors.is_empty(),
+        "Permissive mode should always have empty provider compat errors"
+    );
+}
+
+// ── Mode Default Verification ───────────────────────────────────────────────
+
+#[test]
+fn test_mode_defaults_to_strict() {
+    use jsonschema_llm_core::Mode;
+
+    let defaults = ConvertOptions::default();
+    assert_eq!(defaults.mode, Mode::Strict, "Default mode should be Strict");
+}

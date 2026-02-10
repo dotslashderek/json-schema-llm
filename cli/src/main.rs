@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use jsonschema_llm_core::config::PolymorphismStrategy;
-use jsonschema_llm_core::{convert, rehydrate, Codec, ConvertOptions, Target};
+use jsonschema_llm_core::{convert, rehydrate, Codec, ConvertOptions, Mode, Target};
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
 use std::path::PathBuf;
@@ -38,6 +38,10 @@ enum Commands {
         /// Target LLM provider
         #[arg(short, long, value_enum, default_value_t = TargetArg::OpenaiStrict)]
         target: TargetArg,
+
+        /// Conversion mode (strict vs permissive)
+        #[arg(long, value_enum, default_value_t = ModeArg::Strict)]
+        mode: ModeArg,
 
         /// Polymorphism strategy
         #[arg(long, value_enum, default_value_t = PolymorphismArg::AnyOf)]
@@ -93,6 +97,21 @@ impl From<TargetArg> for Target {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum ModeArg {
+    Strict,
+    Permissive,
+}
+
+impl From<ModeArg> for Mode {
+    fn from(val: ModeArg) -> Self {
+        match val {
+            ModeArg::Strict => Mode::Strict,
+            ModeArg::Permissive => Mode::Permissive,
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum PolymorphismArg {
     #[value(name = "anyof")]
     AnyOf,
@@ -134,6 +153,7 @@ fn main() -> Result<()> {
             output,
             codec: codec_path,
             target,
+            mode,
             polymorphism,
             max_depth,
             recursion_limit,
@@ -148,6 +168,7 @@ fn main() -> Result<()> {
             // All fields set explicitly; clippy enforces exhaustiveness
             let options = ConvertOptions {
                 target: target.into(),
+                mode: mode.into(),
                 polymorphism: polymorphism.into(),
                 max_depth,
                 recursion_limit,
@@ -169,6 +190,15 @@ fn main() -> Result<()> {
             // Write codec sidecar
             if let Some(path) = codec_path {
                 write_json(&result.codec, Some(&path), format)?;
+            }
+
+            // Report provider compat errors
+            if !result.provider_compat_errors.is_empty() {
+                eprintln!("Provider compatibility check failed:");
+                for err in &result.provider_compat_errors {
+                    eprintln!("- {}", err);
+                }
+                std::process::exit(1);
             }
         }
         Commands::Rehydrate {
