@@ -105,6 +105,18 @@ describe("convert", () => {
       expect(result.apiVersion).toBe("1.0");
     });
   });
+
+  describe("kebab-case options", () => {
+    it("accepts kebab-case option keys via alias", () => {
+      const result = wasm.convert(FIXTURES[0].schema, {
+        target: "openai-strict",
+        "max-depth": 10,
+        "recursion-limit": 2,
+      });
+      expect(result.apiVersion).toBe("1.0");
+    });
+  });
+
 });
 
 // ---------------------------------------------------------------------------
@@ -135,8 +147,8 @@ describe("rehydrate", () => {
     expect(Array.isArray(result.warnings)).toBe(true);
   });
 
-  it("rehydrate with constraint-violating data → warnings populated", () => {
-    // Use kitchen_sink which has dropped constraints
+  it("rehydrate with dropped constraints → non-empty droppedConstraints", () => {
+    // kitchen_sink has constraints that get dropped for openai-strict
     const kitchenSink = FIXTURES.find((f) => f.name === "kitchen_sink");
     if (!kitchenSink) return; // skip if fixture missing
 
@@ -144,10 +156,13 @@ describe("rehydrate", () => {
       target: "openai-strict",
     });
 
-    // If there are dropped constraints, rehydrating with any data should work
-    expect(codec.droppedConstraints).toBeDefined();
+    // kitchen_sink should have dropped constraints (e.g. minLength, pattern, etc.)
+    expect(codec.droppedConstraints.length).toBeGreaterThan(
+      0,
+      "kitchen_sink should have dropped constraints for openai-strict",
+    );
 
-    // Even an empty object should be processable
+    // Rehydrate with data — should succeed and produce warnings array
     const result = wasm.rehydrate({}, codec);
     expect(result).toHaveProperty("apiVersion", "1.0");
     expect(Array.isArray(result.warnings)).toBe(true);

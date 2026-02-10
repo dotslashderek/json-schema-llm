@@ -52,42 +52,28 @@ struct WasmRehydrateResult<'a> {
 ///
 /// NOTE: Keep in sync with `jsonschema_llm_core::ConvertOptions`.
 /// If core adds new options, update this struct to match.
+/// Defaults are sourced from `ConvertOptions::default()` (single source of truth).
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WasmConvertOptions {
-    #[serde(default = "default_target", alias = "target")]
-    target: Target,
-    #[serde(default = "default_max_depth", alias = "max-depth")]
-    max_depth: usize,
-    #[serde(default = "default_recursion_limit", alias = "recursion-limit")]
-    recursion_limit: usize,
-    #[serde(default = "default_polymorphism", alias = "polymorphism")]
-    polymorphism: PolymorphismStrategy,
-}
-
-fn default_target() -> Target {
-    Target::OpenaiStrict
-}
-
-fn default_max_depth() -> usize {
-    50
-}
-
-fn default_recursion_limit() -> usize {
-    3
-}
-
-fn default_polymorphism() -> PolymorphismStrategy {
-    PolymorphismStrategy::AnyOf
+    #[serde(alias = "target")]
+    target: Option<Target>,
+    #[serde(alias = "max-depth")]
+    max_depth: Option<usize>,
+    #[serde(alias = "recursion-limit")]
+    recursion_limit: Option<usize>,
+    #[serde(alias = "polymorphism")]
+    polymorphism: Option<PolymorphismStrategy>,
 }
 
 impl From<WasmConvertOptions> for ConvertOptions {
     fn from(wasm: WasmConvertOptions) -> Self {
+        let defaults = ConvertOptions::default();
         ConvertOptions {
-            target: wasm.target,
-            max_depth: wasm.max_depth,
-            recursion_limit: wasm.recursion_limit,
-            polymorphism: wasm.polymorphism,
+            target: wasm.target.unwrap_or(defaults.target),
+            max_depth: wasm.max_depth.unwrap_or(defaults.max_depth),
+            recursion_limit: wasm.recursion_limit.unwrap_or(defaults.recursion_limit),
+            polymorphism: wasm.polymorphism.unwrap_or(defaults.polymorphism),
         }
     }
 }
