@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_name": { "type": "string" },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "data_type": {
+            "enum": ["string", "integer", "float", "boolean", "timestamp", "json", "array"]
+          },
+          "nullable": { "type": "boolean" },
+          "default": {},
+          "constraints": {
+            "type": "object",
+            "properties": {
+              "primary_key": { "type": "boolean" },
+              "unique": { "type": "boolean" },
+              "foreign_key": {
+                "type": "object",
+                "properties": {
+                  "table": { "type": "string" },
+                  "column": { "type": "string" }
+                },
+                "required": ["table", "column"]
+              },
+              "check": { "type": "string" }
+            }
+          }
+        },
+        "required": ["name", "data_type", "nullable"]
+      },
+      "minItems": 1
+    },
+    "indexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "columns": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "unique": { "type": "boolean" },
+          "type": { "enum": ["btree", "hash", "gin", "gist"] }
+        },
+        "required": ["name", "columns"]
+      }
+    },
+    "partitioning": {
+      "type": "object",
+      "properties": {
+        "strategy": { "enum": ["range", "hash", "list"] },
+        "key": { "type": "string" },
+        "partitions": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["strategy", "key"]
+    }
+  },
+  "required": ["schema_name", "schema_version", "columns"]
+}

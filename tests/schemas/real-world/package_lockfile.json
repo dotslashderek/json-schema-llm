@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "package": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "pattern": "^@?[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)?$" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-z0-9.]+)?(\\+[a-z0-9.]+)?$" },
+        "license": { "type": "string" },
+        "dependencies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/package" }
+        },
+        "dev_only": { "type": "boolean" },
+        "checksum": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "required": ["name", "version"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "lockfile_version": { "type": "integer", "minimum": 1 },
+    "root": { "$ref": "#/$defs/package" },
+    "resolved_packages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/package" }
+    },
+    "integrity": { "type": "string" }
+  },
+  "required": ["lockfile_version", "root", "resolved_packages"]
+}

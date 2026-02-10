@@ -1,0 +1,25 @@
+{
+  "$defs": {
+    "tree_node": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tree_node"
+          }
+        }
+      },
+      "required": [
+        "label"
+      ]
+    }
+  },
+  "$ref": "#/$defs/tree_node"
+}

@@ -1,0 +1,53 @@
+{
+  "allOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version"
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "text"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "content"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "image"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "alt_text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "url"
+          ]
+        }
+      ]
+    }
+  ]
+}

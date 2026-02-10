@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "fs_entry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "file"
+            },
+            "name": {
+              "type": "string"
+            },
+            "size_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "permissions": {
+              "type": "string",
+              "pattern": "^[rwx-]{9}$"
+            }
+          },
+          "required": [
+            "type",
+            "name",
+            "size_bytes"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "directory"
+            },
+            "name": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/fs_entry"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "name",
+            "children"
+          ]
+        }
+      ]
+    }
+  },
+  "$ref": "#/$defs/fs_entry"
+}

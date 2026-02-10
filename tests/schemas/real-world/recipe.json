@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "recipe_id": { "type": "string", "format": "uuid" },
+    "title": { "type": "string", "minLength": 1 },
+    "author": { "type": "string" },
+    "cuisine": { "enum": ["italian", "mexican", "japanese", "indian", "french", "thai", "american", "chinese", "other"] },
+    "prep_time_minutes": { "type": "integer", "minimum": 0 },
+    "cook_time_minutes": { "type": "integer", "minimum": 0 },
+    "servings": { "type": "integer", "minimum": 1 },
+    "difficulty": { "enum": ["easy", "medium", "hard", "expert"] },
+    "dietary_tags": {
+      "type": "array",
+      "items": { "enum": ["vegetarian", "vegan", "gluten-free", "dairy-free", "nut-free", "halal", "kosher"] },
+      "uniqueItems": true
+    },
+    "ingredients": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "amount": { "type": "number", "minimum": 0, "exclusiveMinimum": 0 },
+          "unit": { "enum": ["g", "kg", "ml", "l", "tsp", "tbsp", "cup", "oz", "lb", "piece", "pinch"] },
+          "optional": { "type": "boolean" }
+        },
+        "required": ["name", "amount", "unit"]
+      },
+      "minItems": 1
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step_number": { "type": "integer", "minimum": 1 },
+          "instruction": { "type": "string" },
+          "duration_minutes": { "type": "integer", "minimum": 0 },
+          "temperature_f": { "type": "integer" }
+        },
+        "required": ["step_number", "instruction"]
+      },
+      "minItems": 1
+    },
+    "nutrition_per_serving": {
+      "type": "object",
+      "properties": {
+        "calories": { "type": "integer", "minimum": 0 },
+        "protein_g": { "type": "number", "minimum": 0 },
+        "carbs_g": { "type": "number", "minimum": 0 },
+        "fat_g": { "type": "number", "minimum": 0 },
+        "fiber_g": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "required": ["recipe_id", "title", "cuisine", "ingredients", "steps"]
+}

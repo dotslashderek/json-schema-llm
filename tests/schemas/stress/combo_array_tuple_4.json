@@ -6,14 +6,12 @@
     },
     {
       "type": "integer"
-    },
-    {
-      "type": "integer"
     }
   ],
   "items": {
     "type": "string"
   },
-  "minItems": 3,
-  "maxItems": 8
+  "minItems": 2,
+  "maxItems": 7,
+  "description": "Tuple variant 4"
 }
