@@ -1,0 +1,54 @@
+name: npm Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Build & Publish WASM to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: v0.13.1
+
+      - name: Cache cargo registry & build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Build WASM (nodejs)
+        run: wasm-pack build crates/jsonschema-llm-wasm --target nodejs --out-dir pkg-nodejs
+
+      - name: Build WASM (web)
+        run: wasm-pack build crates/jsonschema-llm-wasm --target web --out-dir pkg-web
+
+      - name: Assemble npm package
+        run: bash scripts/assemble-npm.sh
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd dist && npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Publish to npm
+        run: cd dist && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
