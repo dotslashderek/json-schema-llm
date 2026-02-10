@@ -466,3 +466,244 @@ fn test_convert_bridge_camel_case_codec_fields() {
         "Codec in bridge output must NOT use snake_case 'dropped_constraints'"
     );
 }
+
+// ===========================================================================
+// Edge-Case Coverage — FFI Hardening (#37 epic closure)
+// ===========================================================================
+
+/// Default options via JSON bridge — `"{}"` should fail because `target` is required.
+/// This documents the contract: consumers MUST provide at least `target`.
+#[test]
+fn test_convert_json_default_options_requires_target() {
+    let schema =
+        r#"{"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}"#;
+    // ConvertOptions requires `target` — empty object should fail deserialization
+    let result = convert_json(schema, "{}");
+    assert!(
+        result.is_err(),
+        "Empty options must fail (target is required)"
+    );
+
+    let err: serde_json::Value = serde_json::from_str(&result.unwrap_err()).unwrap();
+    assert_eq!(err["code"].as_str().unwrap(), "json_parse_error");
+}
+
+/// Empty schema `{}` is valid Draft 2020-12 (accept anything) — must not panic.
+#[test]
+fn test_convert_json_empty_schema() {
+    let options = r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#;
+    let result = convert_json("{}", options);
+    // Either Ok or a structured error — never panic
+    match result {
+        Ok(json_str) => {
+            let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+            assert!(parsed.get("apiVersion").is_some());
+        }
+        Err(err_str) => {
+            let err: serde_json::Value = serde_json::from_str(&err_str)
+                .unwrap_or_else(|_| panic!("Error must be valid JSON: {}", err_str));
+            assert!(err.get("code").is_some());
+        }
+    }
+}
+
+/// Boolean schemas (`true` / `false`) are valid Draft 2020-12 — must not panic.
+#[test]
+fn test_convert_json_boolean_schemas() {
+    let options = r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#;
+
+    for schema in &["true", "false"] {
+        let result = convert_json(schema, options);
+        // Either Ok or a structured error — never panic
+        match result {
+            Ok(json_str) => {
+                let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+                assert!(parsed.get("apiVersion").is_some());
+            }
+            Err(err_str) => {
+                let err: serde_json::Value = serde_json::from_str(&err_str).unwrap_or_else(|_| {
+                    panic!(
+                        "Error must be valid JSON for schema={}: {}",
+                        schema, err_str
+                    )
+                });
+                assert!(err.get("code").is_some());
+            }
+        }
+    }
+}
+
+/// Complex roundtrip through JSON bridge — map→array transform exercised via strings.
+#[test]
+fn test_roundtrip_json_bridge_with_map_transform() {
+    let schema = r#"{
+        "type": "object",
+        "properties": {
+            "tags": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+            }
+        },
+        "required": ["tags"]
+    }"#;
+    let options = r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#;
+
+    // Step 1: Convert
+    let convert_result = convert_json(schema, options).expect("convert_json should succeed");
+    let convert_parsed: serde_json::Value = serde_json::from_str(&convert_result).unwrap();
+
+    // Verify tags was transpiled to array
+    assert_eq!(
+        convert_parsed["schema"]["properties"]["tags"]["type"], "array",
+        "tags should be transpiled to array for OpenAI strict"
+    );
+
+    // Step 2: Extract codec
+    let codec_json = serde_json::to_string(&convert_parsed["codec"]).unwrap();
+
+    // Step 3: Simulate LLM output with array-of-kv format
+    let llm_output =
+        r#"{"tags": [{"key": "env", "value": "prod"}, {"key": "team", "value": "backend"}]}"#;
+
+    // Step 4: Rehydrate
+    let rehydrate_result =
+        rehydrate_json(llm_output, &codec_json).expect("rehydrate_json should succeed");
+    let rehydrate_parsed: serde_json::Value = serde_json::from_str(&rehydrate_result).unwrap();
+
+    // Verify map was restored
+    assert_eq!(rehydrate_parsed["data"]["tags"]["env"], "prod");
+    assert_eq!(rehydrate_parsed["data"]["tags"]["team"], "backend");
+}
+
+/// ConvertResult must be deserializable from its own serialized JSON.
+#[test]
+fn test_convert_result_deserialize_roundtrip() {
+    use jsonschema_llm_core::{convert, ConvertOptions, ConvertResult};
+
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+    });
+    let result = convert(&schema, &ConvertOptions::default()).unwrap();
+
+    // Serialize to JSON string
+    let json_str = serde_json::to_string(&result).unwrap();
+
+    // Deserialize back to ConvertResult
+    let deserialized: ConvertResult = serde_json::from_str(&json_str)
+        .expect("ConvertResult must be deserializable from its own serialized output");
+
+    assert_eq!(deserialized.schema, result.schema);
+    assert_eq!(
+        serde_json::to_value(&deserialized.codec).unwrap(),
+        serde_json::to_value(&result.codec).unwrap()
+    );
+}
+
+/// Every ConvertError variant must produce valid structured JSON with {code, message, path}.
+#[test]
+fn test_error_json_all_variants_shape() {
+    let errors: Vec<ConvertError> = vec![
+        ConvertError::JsonError(serde_json::from_str::<serde_json::Value>("{{").unwrap_err()),
+        ConvertError::SchemaError {
+            path: "#/test".to_string(),
+            message: "test error".to_string(),
+        },
+        ConvertError::RecursionDepthExceeded {
+            path: "#/test".to_string(),
+            max_depth: 50,
+        },
+        ConvertError::UnsupportedFeature {
+            path: "#/test".to_string(),
+            feature: "testFeature".to_string(),
+        },
+        ConvertError::UnresolvableRef {
+            path: "#/test".to_string(),
+            reference: "#/missing".to_string(),
+        },
+        ConvertError::RehydrationError("test rehydration error".to_string()),
+        ConvertError::CodecVersionMismatch {
+            found: "v99".to_string(),
+            expected: "v1".to_string(),
+        },
+    ];
+
+    for err in &errors {
+        let json = err.to_json();
+        assert!(
+            json.get("code").unwrap().is_string(),
+            "Error {:?} missing string 'code' field",
+            err.error_code()
+        );
+        assert!(
+            json.get("message").unwrap().is_string(),
+            "Error {:?} missing string 'message' field",
+            err.error_code()
+        );
+        assert!(
+            json.get("path").is_some(),
+            "Error {:?} missing 'path' field (should be string or null)",
+            err.error_code()
+        );
+    }
+}
+
+/// Thread safety — multiple independent convert_json calls must not interfere.
+#[test]
+fn test_convert_json_concurrent_calls() {
+    use std::thread;
+
+    let handles: Vec<_> = (0..4)
+        .map(|i| {
+            thread::spawn(move || {
+                let schema = format!(
+                    r#"{{"type": "object", "properties": {{"field{}": {{"type": "string"}}}}, "required": ["field{}"]}}"#,
+                    i, i
+                );
+                let options = r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#;
+                let result = convert_json(&schema, options);
+                assert!(result.is_ok(), "Thread {} failed: {:?}", i, result.err());
+
+                let parsed: serde_json::Value = serde_json::from_str(&result.unwrap()).unwrap();
+                assert_eq!(parsed["apiVersion"].as_str().unwrap(), "1.0");
+                let prop_key = format!("field{}", i);
+                assert!(
+                    parsed["schema"]["properties"].get(&prop_key).is_some(),
+                    "Thread {} output missing property {}",
+                    i,
+                    prop_key
+                );
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().expect("Thread panicked");
+    }
+}
+
+/// Bridge error codes must match typed API error codes for the same input.
+#[test]
+fn test_bridge_error_matches_typed_error() {
+    // Trigger a JsonParseError through both APIs
+    let bridge_err = convert_json(
+        "not valid json",
+        r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#,
+    );
+    assert!(bridge_err.is_err());
+
+    let bridge_code: serde_json::Value = serde_json::from_str(&bridge_err.unwrap_err()).unwrap();
+    let bridge_code_str = bridge_code["code"].as_str().unwrap();
+
+    // Same error through typed API
+    let typed_err = serde_json::from_str::<serde_json::Value>("not valid json").unwrap_err();
+    let typed_error = ConvertError::JsonError(typed_err);
+    let typed_code = serde_json::to_value(typed_error.error_code()).unwrap();
+
+    assert_eq!(
+        bridge_code_str,
+        typed_code.as_str().unwrap(),
+        "Bridge and typed API must produce identical error codes"
+    );
+}
