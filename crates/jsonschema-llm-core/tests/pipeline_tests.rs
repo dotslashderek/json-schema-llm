@@ -1,4 +1,4 @@
-//! Integration tests for the `convert()` pipeline — exercises the full 8-pass chain
+//! Integration tests for the `convert()` pipeline — exercises the full 9-pass chain
 //! via the public API only, never calling individual passes directly.
 
 use jsonschema_llm_core::codec::Transform;
