@@ -488,9 +488,11 @@ fn test_convert_json_default_options_requires_target() {
     assert_eq!(err["code"].as_str().unwrap(), "json_parse_error");
 }
 
-/// Empty schema `{}` is valid Draft 2020-12 (accept anything) — must not panic.
+/// Panic-safety: empty schema `{}` (valid Draft 2020-12, means "accept anything").
+/// Contract: no panic; if Ok, must have apiVersion; if Err, must be structured JSON.
+/// This does NOT assert conversion succeeds — empty schema support is best-effort.
 #[test]
-fn test_convert_json_empty_schema() {
+fn test_convert_json_empty_schema_no_panic() {
     let options = r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#;
     let result = convert_json("{}", options);
     // Either Ok or a structured error — never panic
@@ -507,9 +509,11 @@ fn test_convert_json_empty_schema() {
     }
 }
 
-/// Boolean schemas (`true` / `false`) are valid Draft 2020-12 — must not panic.
+/// Panic-safety: boolean schemas (`true`/`false`) are valid Draft 2020-12.
+/// Contract: no panic; if Ok, must have apiVersion; if Err, must be structured JSON.
+/// This does NOT assert conversion succeeds — boolean schema support is best-effort.
 #[test]
-fn test_convert_json_boolean_schemas() {
+fn test_convert_json_boolean_schemas_no_panic() {
     let options = r#"{"target": "openai-strict", "max-depth": 50, "recursion-limit": 3, "polymorphism": "any-of"}"#;
 
     for schema in &["true", "false"] {
