@@ -13,16 +13,15 @@ fn cmd() -> Command {
     Command::cargo_bin("jsonschema-llm").expect("binary should exist")
 }
 
-fn fixture_names() -> Vec<&'static str> {
-    vec![
-        "simple",
-        "maps",
-        "discriminator",
-        "opaque",
-        "allof",
-        "recursive",
-        "kitchen_sink",
-    ]
+/// Fixtures that convert cleanly with zero provider compat errors.
+fn clean_fixtures() -> Vec<&'static str> {
+    vec!["simple", "discriminator", "opaque", "allof"]
+}
+
+/// Fixtures that trigger advisory provider compat warnings (e.g. depth budget)
+/// but still produce valid output. The CLI exits 1 for these.
+fn warned_fixtures() -> Vec<&'static str> {
+    vec!["maps", "kitchen_sink", "recursive"]
 }
 
 // ── E2E: Convert all fixtures via CLI ───────────────────────────────────────
@@ -31,7 +30,21 @@ fn fixture_names() -> Vec<&'static str> {
 fn test_cli_e2e_convert_all_fixtures() {
     let dir = TempDir::new().unwrap();
 
-    for name in fixture_names() {
+    // Helper: validate output files exist and contain valid JSON
+    let validate_outputs = |name: &str, output: &std::path::Path, codec: &std::path::Path| {
+        let out_content = fs::read_to_string(output)
+            .unwrap_or_else(|e| panic!("Output file for {name} missing: {e}"));
+        let _: serde_json::Value =
+            serde_json::from_str(&out_content).expect("output should be valid JSON");
+
+        let codec_content = fs::read_to_string(codec)
+            .unwrap_or_else(|e| panic!("Codec file for {name} missing: {e}"));
+        let _: serde_json::Value =
+            serde_json::from_str(&codec_content).expect("codec should be valid JSON");
+    };
+
+    // Clean fixtures: should exit 0
+    for name in clean_fixtures() {
         let input = format!("{FIXTURES_DIR}/{name}.json");
         let output = dir.path().join(format!("{name}.converted.json"));
         let codec = dir.path().join(format!("{name}.codec.json"));
@@ -43,16 +56,24 @@ fn test_cli_e2e_convert_all_fixtures() {
             .assert()
             .success();
 
-        // Both files should exist and be valid JSON
-        let out_content = fs::read_to_string(&output)
-            .unwrap_or_else(|e| panic!("Output file for {name} missing: {e}"));
-        let _: serde_json::Value =
-            serde_json::from_str(&out_content).expect("output should be valid JSON");
+        validate_outputs(name, &output, &codec);
+    }
 
-        let codec_content = fs::read_to_string(&codec)
-            .unwrap_or_else(|e| panic!("Codec file for {name} missing: {e}"));
-        let _: serde_json::Value =
-            serde_json::from_str(&codec_content).expect("codec should be valid JSON");
+    // Warned fixtures: exit 1 with provider compat warnings, but output is valid
+    for name in warned_fixtures() {
+        let input = format!("{FIXTURES_DIR}/{name}.json");
+        let output = dir.path().join(format!("{name}.converted.json"));
+        let codec = dir.path().join(format!("{name}.codec.json"));
+
+        cmd()
+            .args(["convert", &input])
+            .args(["-o", output.to_str().unwrap()])
+            .args(["--codec", codec.to_str().unwrap()])
+            .assert()
+            .failure()
+            .stderr(predicate::str::contains("Provider compatibility check"));
+
+        validate_outputs(name, &output, &codec);
     }
 }
 
@@ -103,7 +124,8 @@ fn test_cli_e2e_roundtrip() {
 #[test]
 fn test_cli_e2e_multi_target() {
     let dir = TempDir::new().unwrap();
-    let input = format!("{FIXTURES_DIR}/kitchen_sink.json");
+    // Use simple.json for multi-target — it's clean across all providers
+    let input = format!("{FIXTURES_DIR}/simple.json");
 
     for target in ["openai-strict", "gemini", "claude"] {
         let output = dir.path().join(format!("{target}.json"));

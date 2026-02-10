@@ -45,6 +45,7 @@ pub fn rehydrate(data: &Value, codec: &Codec) -> Result<RehydrateResult, Convert
             Transform::DiscriminatorAnyOf { path, .. } => path,
             Transform::ExtractAdditionalProperties { path, .. } => path,
             Transform::RecursiveInflate { path, .. } => path,
+            Transform::RootObjectWrapper { path, .. } => path,
         };
 
         let segments = split_path(path_str);
@@ -75,6 +76,7 @@ fn build_pattern_properties_cache(codec: &Codec) -> HashMap<String, Result<Regex
         Transform::DiscriminatorAnyOf { path, .. } => path.as_str(),
         Transform::ExtractAdditionalProperties { path, .. } => path.as_str(),
         Transform::RecursiveInflate { path, .. } => path.as_str(),
+        Transform::RootObjectWrapper { path, .. } => path.as_str(),
     });
     let constraint_paths = codec.dropped_constraints.iter().map(|dc| dc.path.as_str());
 
@@ -292,6 +294,14 @@ fn execute_transform(data: &mut Value, transform: &Transform) -> Result<(), Conv
         }
         Transform::RecursiveInflate { .. } => {
             parse_json_string(data)?;
+        }
+        Transform::RootObjectWrapper { wrapper_key, .. } => {
+            // Unwrap: extract data[wrapper_key] and promote it to root
+            if let Some(obj) = data.as_object_mut() {
+                if let Some(inner) = obj.remove(wrapper_key) {
+                    *data = inner;
+                }
+            }
         }
     }
     Ok(())

@@ -158,14 +158,22 @@ fn test_convert_with_oneof() {
 
     let result = convert(&schema, &openai_options()).expect("convert should succeed");
 
-    // oneOf should be rewritten to anyOf for OpenAI
+    // Non-object root → p9 wraps in { type: object, properties: { result: … } }
+    assert_eq!(
+        result.schema["type"],
+        json!("object"),
+        "non-object root should be wrapped as object"
+    );
+
+    // The original oneOf→anyOf conversion lives inside properties.result
+    let inner = &result.schema["properties"]["result"];
     assert!(
-        result.schema.get("oneOf").is_none(),
+        inner.get("oneOf").is_none(),
         "oneOf should be removed"
     );
     assert!(
-        result.schema.get("anyOf").is_some(),
-        "anyOf should be present"
+        inner.get("anyOf").is_some(),
+        "anyOf should be present inside the wrapper"
     );
 }
 

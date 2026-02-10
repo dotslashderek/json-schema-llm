@@ -56,6 +56,11 @@ pub enum Transform {
         #[serde(rename = "originalRef")]
         original_ref: String,
     },
+    RootObjectWrapper {
+        path: String,
+        #[serde(rename = "wrapperKey")]
+        wrapper_key: String,
+    },
 }
 
 /// A constraint that was dropped during conversion.

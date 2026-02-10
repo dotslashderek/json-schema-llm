@@ -118,6 +118,8 @@ pub fn convert(schema: &Value, options: &ConvertOptions) -> Result<ConvertResult
 
     // Pass 9: Provider compatibility checks (soft errors)
     let p9 = passes::p9_provider_compat::check_provider_compat(&schema, options);
+    schema = p9.schema;
+    codec.transforms.extend(p9.transforms);
 
     Ok(ConvertResult {
         schema,
