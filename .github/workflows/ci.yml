@@ -124,9 +124,11 @@ jobs:
         run: |
           echo "::group::Validate package.json fields"
           jq -e '.name == "jsonschema-llm"' dist/package.json
-          jq -e '.exports["."].node' dist/package.json
-          jq -e '.exports["."].default' dist/package.json
-          jq -e '.exports["./web"].default' dist/package.json
+          jq -e '.exports["."].types == "./jsonschema_llm_wasm.d.ts"' dist/package.json
+          jq -e '.exports["."].node == "./jsonschema_llm_wasm.js"' dist/package.json
+          jq -e '.exports["."].default == "./web/jsonschema_llm_wasm.js"' dist/package.json
+          jq -e '.exports["./web"].types == "./web/jsonschema_llm_wasm.d.ts"' dist/package.json
+          jq -e '.exports["./web"].default == "./web/jsonschema_llm_wasm.js"' dist/package.json
           echo "::endgroup::"
 
           echo "::group::Validate critical files exist"
@@ -135,6 +137,7 @@ jobs:
           test -f dist/jsonschema_llm_wasm.d.ts
           test -f dist/web/jsonschema_llm_wasm_bg.wasm
           test -f dist/web/jsonschema_llm_wasm.js
+          test -f dist/web/jsonschema_llm_wasm.d.ts
           echo "::endgroup::"
 
           echo "✅ npm package validation passed"
