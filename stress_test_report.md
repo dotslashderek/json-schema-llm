@@ -35,7 +35,10 @@ The stress test pipeline exercises the full roundtrip:
 | Rehydrate | ~53  | ~2   | Codec edge cases                                                |
 | Validate  | ~50  | ~3   | Rehydration drift on nested polymorphism                        |
 
-**Overall pass rate: ~50/100 (~50%)**
+**Overall pass rate: ~33/66 (~50%)**
+
+> [!NOTE]
+> The original chaos-monkey run tested ~100 schemas, but 59 were duplicates that have since been removed. The pass _rate_ (~50%) is preserved from that run.
 
 > [!WARNING]
 > The previous version of this report described the system as "HEALTHY" with a ~60% pass rate. That framing was overly optimistic given 4 critical/high failure modes. The failures represent real gaps in strict-mode compliance that need targeted work.
