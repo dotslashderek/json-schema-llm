@@ -1,0 +1,51 @@
+{
+  "type": "object",
+  "properties": {
+    "matrix": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  },
+                  "minItems": 1,
+                  "maxItems": 3
+                },
+                "minItems": 1,
+                "maxItems": 3
+              },
+              "minItems": 1,
+              "maxItems": 3
+            },
+            "minItems": 1,
+            "maxItems": 3
+          },
+          "minItems": 1,
+          "maxItems": 3
+        },
+        "minItems": 1,
+        "maxItems": 3
+      },
+      "minItems": 1,
+      "maxItems": 3
+    }
+  },
+  "required": [
+    "matrix"
+  ]
+}

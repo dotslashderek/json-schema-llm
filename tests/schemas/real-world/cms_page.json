@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "component": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "heading" },
+            "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+            "text": { "type": "string" }
+          },
+          "required": ["type", "level", "text"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "paragraph" },
+            "text": { "type": "string" },
+            "alignment": { "enum": ["left", "center", "right", "justify"] }
+          },
+          "required": ["type", "text"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "image" },
+            "src": { "type": "string", "format": "uri" },
+            "alt": { "type": "string" },
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["type", "src", "alt"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "code_block" },
+            "language": { "type": "string" },
+            "code": { "type": "string" }
+          },
+          "required": ["type", "code"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "section" },
+            "title": { "type": "string" },
+            "children": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/component" }
+            }
+          },
+          "required": ["type", "children"]
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "page_title": { "type": "string" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$" },
+    "published": { "type": "boolean" },
+    "body": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/component" },
+      "minItems": 1
+    },
+    "seo": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 160 },
+        "keywords": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "required": ["page_title", "slug", "body"]
+}

@@ -2,18 +2,22 @@
   "type": "array",
   "prefixItems": [
     {
+      "type": "string"
+    },
+    {
       "type": "boolean"
     },
     {
-      "type": "null"
+      "type": "boolean"
     },
     {
-      "type": "string"
+      "type": "boolean"
     }
   ],
   "items": {
     "type": "string"
   },
-  "minItems": 3,
-  "maxItems": 8
+  "minItems": 4,
+  "maxItems": 9,
+  "description": "Tuple variant 9"
 }

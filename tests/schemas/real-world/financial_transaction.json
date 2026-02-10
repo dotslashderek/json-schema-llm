@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "transaction_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "type": { "enum": ["deposit", "withdrawal", "transfer", "payment", "refund"] },
+    "amount": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number", "exclusiveMinimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+      },
+      "required": ["value", "currency"]
+    },
+    "from_account": {
+      "type": "object",
+      "properties": {
+        "account_number": { "type": "string" },
+        "routing_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "institution": { "type": "string" }
+      },
+      "required": ["account_number"]
+    },
+    "to_account": {
+      "type": "object",
+      "properties": {
+        "account_number": { "type": "string" },
+        "routing_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "institution": { "type": "string" }
+      },
+      "required": ["account_number"]
+    },
+    "status": { "enum": ["pending", "completed", "failed", "reversed"] },
+    "risk_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "flags": {
+      "type": "array",
+      "items": { "enum": ["suspicious", "large_amount", "international", "first_time_recipient"] },
+      "uniqueItems": true
+    },
+    "memo": { "type": ["string", "null"], "maxLength": 500 }
+  },
+  "required": ["transaction_id", "timestamp", "type", "amount", "from_account", "status"],
+  "if": {
+    "properties": { "type": { "const": "transfer" } }
+  },
+  "then": {
+    "required": ["to_account"]
+  }
+}

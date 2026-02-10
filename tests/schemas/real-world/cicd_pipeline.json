@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "pipeline_id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string" },
+    "trigger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "push" },
+            "branches": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          },
+          "required": ["type", "branches"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "schedule" },
+            "cron": { "type": "string", "pattern": "^[0-9*,/-]+ [0-9*,/-]+ [0-9*,/-]+ [0-9*,/-]+ [0-9*,/-]+$" }
+          },
+          "required": ["type", "cron"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "manual" }
+          },
+          "required": ["type"]
+        }
+      ]
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "image": { "type": "string" },
+          "commands": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "env": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "retry": {
+            "type": "object",
+            "properties": {
+              "max_attempts": { "type": "integer", "minimum": 1, "maximum": 5 },
+              "backoff_seconds": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "required": ["name", "image", "commands"]
+      },
+      "minItems": 1
+    },
+    "notifications": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "channel": { "const": "slack" },
+              "webhook_url": { "type": "string", "format": "uri" },
+              "on_failure_only": { "type": "boolean" }
+            },
+            "required": ["channel", "webhook_url"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "channel": { "const": "email" },
+              "recipients": { "type": "array", "items": { "type": "string", "format": "email" }, "minItems": 1 }
+            },
+            "required": ["channel", "recipients"]
+          }
+        ]
+      }
+    }
+  },
+  "required": ["pipeline_id", "name", "trigger", "stages"]
+}

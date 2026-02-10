@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "properties": {
+        "service": { "type": "string" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "instance_id": { "type": "string" }
+      },
+      "required": ["service", "version"]
+    },
+    "data": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "metric" },
+            "name": { "type": "string" },
+            "value": { "type": "number" },
+            "unit": { "enum": ["ms", "bytes", "count", "percent"] },
+            "tags": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "required": ["kind", "name", "value", "unit"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "log" },
+            "level": { "enum": ["debug", "info", "warn", "error", "fatal"] },
+            "message": { "type": "string" },
+            "stack_trace": { "type": ["string", "null"] }
+          },
+          "required": ["kind", "level", "message"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "trace" },
+            "trace_id": { "type": "string" },
+            "span_id": { "type": "string" },
+            "parent_span_id": { "type": ["string", "null"] },
+            "duration_ms": { "type": "number", "minimum": 0 },
+            "status": { "enum": ["ok", "error", "timeout"] }
+          },
+          "required": ["kind", "trace_id", "span_id", "duration_ms", "status"]
+        }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": ["event_id", "event_type", "timestamp", "source", "data"]
+}

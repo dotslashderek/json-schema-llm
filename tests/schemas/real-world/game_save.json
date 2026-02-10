@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "game_id": { "type": "string", "format": "uuid" },
+    "world": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "seed": { "type": "integer" },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["width", "height"]
+        },
+        "biomes": {
+          "type": "array",
+          "items": { "enum": ["forest", "desert", "ocean", "tundra", "swamp", "mountains", "plains"] },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "required": ["name", "seed", "dimensions"]
+    },
+    "player": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "health": { "type": "number", "minimum": 0 },
+        "max_health": { "type": "number", "exclusiveMinimum": 0 },
+        "position": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          },
+          "required": ["x", "y", "z"]
+        },
+        "inventory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "item_id": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "rarity": { "enum": ["common", "uncommon", "rare", "epic", "legendary"] },
+              "enchantments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "level": { "type": "integer", "minimum": 1, "maximum": 5 }
+                  },
+                  "required": ["name", "level"]
+                }
+              }
+            },
+            "required": ["item_id", "name", "quantity", "rarity"]
+          },
+          "maxItems": 36
+        }
+      },
+      "required": ["name", "level", "health", "max_health", "position"]
+    },
+    "quests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quest_id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "enum": ["active", "completed", "failed", "abandoned"] },
+          "objectives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": { "type": "string" },
+                "current": { "type": "integer", "minimum": 0 },
+                "target": { "type": "integer", "minimum": 1 }
+              },
+              "required": ["description", "target"]
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["quest_id", "title", "status", "objectives"]
+      }
+    }
+  },
+  "required": ["game_id", "world", "player"]
+}

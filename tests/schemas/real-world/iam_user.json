@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "user_id": { "type": "string", "format": "uuid" },
+    "username": { "type": "string", "minLength": 3, "maxLength": 32, "pattern": "^[a-z][a-z0-9_-]*$" },
+    "email": { "type": "string", "format": "email" },
+    "roles": {
+      "type": "array",
+      "items": { "enum": ["admin", "editor", "viewer", "billing", "support"] },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "permissions": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z]+:[a-z]+$": {
+          "type": "object",
+          "properties": {
+            "allowed": { "type": "boolean" },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": { "type": "string" },
+                  "operator": { "enum": ["eq", "neq", "in", "nin", "gt", "lt"] },
+                  "value": {}
+                },
+                "required": ["field", "operator", "value"]
+              }
+            }
+          },
+          "required": ["allowed"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mfa": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "totp" },
+            "secret": { "type": "string" },
+            "verified": { "type": "boolean" }
+          },
+          "required": ["type", "secret", "verified"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "webauthn" },
+            "credential_id": { "type": "string" },
+            "public_key": { "type": "string" }
+          },
+          "required": ["type", "credential_id", "public_key"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "none" }
+          },
+          "required": ["type"]
+        }
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "last_login": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "required": ["user_id", "username", "email", "roles", "mfa", "created_at"]
+}

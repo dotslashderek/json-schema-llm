@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "patient_id": { "type": "string", "pattern": "^MRN-\\d{8}$" },
+    "demographics": {
+      "type": "object",
+      "properties": {
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "date_of_birth": { "type": "string", "format": "date" },
+        "sex": { "enum": ["male", "female", "other", "unknown"] },
+        "blood_type": { "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] }
+      },
+      "required": ["first_name", "last_name", "date_of_birth", "sex"]
+    },
+    "diagnoses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "icd10_code": { "type": "string", "pattern": "^[A-Z]\\d{2}(\\.\\d{1,4})?$" },
+          "description": { "type": "string" },
+          "diagnosed_date": { "type": "string", "format": "date" },
+          "severity": { "enum": ["mild", "moderate", "severe", "critical"] },
+          "is_primary": { "type": "boolean" }
+        },
+        "required": ["icd10_code", "description", "diagnosed_date"]
+      }
+    },
+    "medications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "dosage_mg": { "type": "number", "minimum": 0, "exclusiveMinimum": 0 },
+          "frequency": { "enum": ["daily", "twice_daily", "weekly", "as_needed"] },
+          "prescriber": { "type": "string" }
+        },
+        "required": ["name", "dosage_mg", "frequency"]
+      }
+    },
+    "vitals": {
+      "type": "object",
+      "properties": {
+        "heart_rate_bpm": { "type": "integer", "minimum": 20, "maximum": 300 },
+        "systolic_bp": { "type": "integer", "minimum": 50, "maximum": 300 },
+        "diastolic_bp": { "type": "integer", "minimum": 20, "maximum": 200 },
+        "temperature_f": { "type": "number", "minimum": 90.0, "maximum": 110.0 },
+        "oxygen_saturation_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    }
+  },
+  "required": ["patient_id", "demographics"]
+}

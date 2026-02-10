@@ -1,0 +1,40 @@
+{
+  "$defs": {
+    "graph_node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "$ref": "#/$defs/graph_node"
+              },
+              "weight": {
+                "type": "number"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "target"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  "$ref": "#/$defs/graph_node"
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "order_id": { "type": "string", "format": "uuid" },
+    "customer": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "email": { "type": "string", "format": "email" },
+        "shipping_address": {
+          "type": "object",
+          "properties": {
+            "street": { "type": "string" },
+            "city": { "type": "string" },
+            "state": { "type": "string", "minLength": 2, "maxLength": 2 },
+            "zip": { "type": "string", "pattern": "^\\d{5}(-\\d{4})?$" },
+            "country": { "type": "string", "const": "US" }
+          },
+          "required": ["street", "city", "state", "zip", "country"]
+        }
+      },
+      "required": ["name", "email", "shipping_address"]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sku": { "type": "string", "pattern": "^[A-Z]{3}-\\d{6}$" },
+          "name": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "unit_price": { "type": "number", "minimum": 0, "exclusiveMinimum": 0 },
+          "discount_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+        },
+        "required": ["sku", "name", "quantity", "unit_price"]
+      },
+      "minItems": 1
+    },
+    "payment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "credit_card" },
+            "last_four": { "type": "string", "pattern": "^\\d{4}$" },
+            "brand": { "enum": ["visa", "mastercard", "amex"] }
+          },
+          "required": ["method", "last_four", "brand"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "paypal" },
+            "paypal_email": { "type": "string", "format": "email" }
+          },
+          "required": ["method", "paypal_email"]
+        }
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["pending", "processing", "shipped", "delivered", "cancelled"] }
+  },
+  "required": ["order_id", "customer", "items", "payment", "created_at", "status"]
+}
