@@ -80,11 +80,23 @@ fn test_convert_with_null_options() {
 
 #[wasm_bindgen_test]
 fn test_convert_camel_case_options() {
-    // JS callers naturally use camelCase
     let opts = serde_json::json!({
         "target": "openai-strict",
         "maxDepth": 10,
         "recursionLimit": 2
+    });
+    let result = convert(schema_js(), serde_wasm_bindgen::to_value(&opts).unwrap()).unwrap();
+    let json = js_to_json(&result);
+
+    assert_eq!(json["apiVersion"], "1.0");
+}
+
+#[wasm_bindgen_test]
+fn test_convert_kebab_case_options() {
+    let opts = serde_json::json!({
+        "target": "openai-strict",
+        "max-depth": 10,
+        "recursion-limit": 2
     });
     let result = convert(schema_js(), serde_wasm_bindgen::to_value(&opts).unwrap()).unwrap();
     let json = js_to_json(&result);
@@ -105,11 +117,9 @@ fn test_convert_all_targets() {
 
 #[wasm_bindgen_test]
 fn test_rehydrate_round_trip() {
-    // Convert → get codec → rehydrate sample data
     let result = convert(schema_js(), JsValue::UNDEFINED).unwrap();
     let result_json = js_to_json(&result);
 
-    // Use json_compatible serializer — same as production code produces Objects not Maps
     let serializer = serde_wasm_bindgen::Serializer::json_compatible();
     let codec_js = result_json["codec"].serialize(&serializer).unwrap();
 
@@ -130,7 +140,6 @@ fn test_rehydrate_round_trip() {
 
 #[wasm_bindgen_test]
 fn test_convert_serde_error_for_bad_options() {
-    // Pass a number as options → can't deserialize as WasmConvertOptions struct
     let bad_opts = JsValue::from_f64(42.0);
     let err = convert(schema_js(), bad_opts).unwrap_err();
     let err_json = js_to_json(&err);
@@ -141,7 +150,6 @@ fn test_convert_serde_error_for_bad_options() {
 
 #[wasm_bindgen_test]
 fn test_rehydrate_serde_error_for_bad_codec() {
-    // Pass a number as codec → can't deserialize as Codec struct
     let data = serde_wasm_bindgen::to_value(&serde_json::json!({"name": "test"})).unwrap();
     let bad_codec = JsValue::from_f64(42.0);
     let err = rehydrate(data, bad_codec).unwrap_err();
