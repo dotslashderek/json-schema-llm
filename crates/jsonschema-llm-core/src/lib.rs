@@ -35,8 +35,8 @@ use serde_json::Value;
 
 pub use codec::Codec;
 pub use codec_warning::Warning;
-pub use config::{ConvertOptions, PolymorphismStrategy, Target};
-pub use error::{ConvertError, ErrorCode};
+pub use config::{ConvertOptions, Mode, PolymorphismStrategy, Target};
+pub use error::{ConvertError, ErrorCode, ProviderCompatError};
 pub use rehydrator::RehydrateResult;
 pub use schema_utils::{build_path, escape_pointer_segment, split_path, unescape_pointer_segment};
 
@@ -50,6 +50,9 @@ pub struct ConvertResult {
     pub schema: Value,
     /// The rehydration codec (sidecar metadata).
     pub codec: Codec,
+    /// Provider compatibility warnings/soft-errors.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provider_compat_errors: Vec<ProviderCompatError>,
 }
 
 /// Convert a JSON Schema into an LLM-compatible structured output schema.
@@ -102,16 +105,25 @@ pub fn convert(schema: &Value, options: &ConvertOptions) -> Result<ConvertResult
     codec.transforms.extend(p5.transforms);
 
     // Pass 6: Strict enforcement
-    let p6 = passes::p6_strict::enforce_strict(&schema, options)?;
-    schema = p6.schema;
-    codec.transforms.extend(p6.transforms);
+    if options.mode == Mode::Strict {
+        let p6 = passes::p6_strict::enforce_strict(&schema, options)?;
+        schema = p6.schema;
+        codec.transforms.extend(p6.transforms);
+    }
 
     // Pass 7: Constraint pruning
     let p7 = passes::p7_constraints::prune_constraints(&schema, options)?;
     schema = p7.schema;
     codec.dropped_constraints.extend(p7.dropped_constraints);
 
-    Ok(ConvertResult { schema, codec })
+    // Pass 9: Provider compatibility checks (soft errors)
+    let p9 = passes::p9_provider_compat::check_provider_compat(&schema, options);
+
+    Ok(ConvertResult {
+        schema,
+        codec,
+        provider_compat_errors: p9.errors,
+    })
 }
 
 /// Rehydrate LLM output back to the original schema shape using the codec.

@@ -15,7 +15,7 @@ use pythonize::{depythonize, pythonize};
 use serde::Deserialize;
 
 use jsonschema_llm_core::{
-    ConvertError, ConvertOptions, PolymorphismStrategy, Target, API_VERSION,
+    ConvertError, ConvertOptions, Mode, PolymorphismStrategy, Target, API_VERSION,
 };
 
 // ---------------------------------------------------------------------------
@@ -32,6 +32,7 @@ use jsonschema_llm_core::{
 #[derive(Default, Deserialize)]
 struct PyConvertOptions {
     target: Option<Target>,
+    mode: Option<Mode>,
     max_depth: Option<usize>,
     recursion_limit: Option<usize>,
     polymorphism: Option<PolymorphismStrategy>,
@@ -42,6 +43,7 @@ impl From<PyConvertOptions> for ConvertOptions {
         let defaults = ConvertOptions::default();
         ConvertOptions {
             target: py_opts.target.unwrap_or(defaults.target),
+            mode: py_opts.mode.unwrap_or(defaults.mode),
             max_depth: py_opts.max_depth.unwrap_or(defaults.max_depth),
             recursion_limit: py_opts.recursion_limit.unwrap_or(defaults.recursion_limit),
             polymorphism: py_opts.polymorphism.unwrap_or(defaults.polymorphism),
@@ -99,12 +101,19 @@ fn to_py_deser_error(py: Python<'_>, e: pythonize::PythonizeError) -> PyErr {
 ///     schema: A JSON Schema as a Python dict (or bool for trivial schemas).
 ///     options: Optional conversion options dict with keys:
 ///         - target: "openai-strict" | "gemini" | "claude"
+///         - mode: "strict" | "permissive"
 ///         - max_depth: Maximum traversal depth (default: 50)
 ///         - recursion_limit: Max recursive type inlining (default: 3)
 ///         - polymorphism: "any-of" | "flatten"
 ///
 /// Returns:
-///     A dict with keys: api_version, schema, codec
+///     A dict with keys: api_version, schema, codec, provider_compat_errors
+///     where provider_compat_errors (if present) is a list of dicts, each with:
+///         - type: error variant ("root_type_incompatible" | "depth_budget_exceeded" |
+///                 "mixed_enum_types" | "unconstrained_schema")
+///         - target: the provider target string
+///         - hint: actionable remediation hint
+///         - (variant-specific keys: actual_type, actual_depth, max_depth, path, etc.)
 ///
 /// Raises:
 ///     JsonSchemaLlmError: If the schema is invalid or conversion fails.
@@ -139,6 +148,12 @@ fn convert(
         "codec",
         pythonize(py, &result.codec).map_err(|e| to_py_deser_error(py, e))?,
     )?;
+    if !result.provider_compat_errors.is_empty() {
+        dict.set_item(
+            "provider_compat_errors",
+            pythonize(py, &result.provider_compat_errors).map_err(|e| to_py_deser_error(py, e))?,
+        )?;
+    }
     Ok(dict.into())
 }
 

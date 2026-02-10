@@ -17,12 +17,17 @@ use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::Serializer;
 
 use jsonschema_llm_core::{
-    ConvertError, ConvertOptions, PolymorphismStrategy, Target, API_VERSION,
+    ConvertError, ConvertOptions, Mode, PolymorphismStrategy, ProviderCompatError, Target,
+    API_VERSION,
 };
 
 // ---------------------------------------------------------------------------
 // WASM-local DTOs (Anti-Corruption Layer)
 // ---------------------------------------------------------------------------
+
+fn is_empty_slice<T>(slice: &&[T]) -> bool {
+    slice.is_empty()
+}
 
 /// WASM envelope for `convert` results.
 /// Injects `apiVersion` and flattens the core `ConvertResult`.
@@ -32,6 +37,8 @@ struct WasmConvertResult<'a> {
     api_version: &'static str,
     schema: &'a serde_json::Value,
     codec: &'a jsonschema_llm_core::Codec,
+    #[serde(skip_serializing_if = "is_empty_slice")]
+    provider_compat_errors: &'a [ProviderCompatError],
 }
 
 /// WASM envelope for `rehydrate` results.
@@ -59,6 +66,8 @@ struct WasmRehydrateResult<'a> {
 struct WasmConvertOptions {
     #[serde(alias = "target")]
     target: Option<Target>,
+    #[serde(alias = "mode")]
+    mode: Option<Mode>,
     #[serde(alias = "max-depth")]
     max_depth: Option<usize>,
     #[serde(alias = "recursion-limit")]
@@ -72,6 +81,7 @@ impl From<WasmConvertOptions> for ConvertOptions {
         let defaults = ConvertOptions::default();
         ConvertOptions {
             target: wasm.target.unwrap_or(defaults.target),
+            mode: wasm.mode.unwrap_or(defaults.mode),
             max_depth: wasm.max_depth.unwrap_or(defaults.max_depth),
             recursion_limit: wasm.recursion_limit.unwrap_or(defaults.recursion_limit),
             polymorphism: wasm.polymorphism.unwrap_or(defaults.polymorphism),
@@ -159,6 +169,7 @@ pub fn convert(schema: JsValue, options: JsValue) -> Result<JsValue, JsValue> {
         api_version: API_VERSION,
         schema: &result.schema,
         codec: &result.codec,
+        provider_compat_errors: &result.provider_compat_errors,
     };
 
     let serializer = Serializer::json_compatible();
@@ -211,10 +222,12 @@ pub fn rehydrate(data: JsValue, codec: JsValue) -> Result<JsValue, JsValue> {
 #[wasm_bindgen(typescript_custom_section)]
 const TS_TYPES: &str = r#"
 export type Target = "openai-strict" | "gemini" | "claude";
+export type Mode = "strict" | "permissive";
 export type PolymorphismStrategy = "any-of" | "flatten";
 
 export interface ConvertOptions {
   target?: Target;
+  mode?: Mode;
   maxDepth?: number;
   recursionLimit?: number;
   polymorphism?: PolymorphismStrategy;
@@ -240,10 +253,17 @@ export interface DroppedConstraint {
   value: unknown;
 }
 
+export type ProviderCompatError =
+  | { type: "root_type_incompatible"; actual_type: string; target: Target; hint: string }
+  | { type: "depth_budget_exceeded"; actual_depth: number; max_depth: number; target: Target; hint: string }
+  | { type: "mixed_enum_types"; path: string; types_found: string[]; target: Target; hint: string }
+  | { type: "unconstrained_schema"; path: string; schema_kind: string; target: Target; hint: string };
+
 export interface ConvertResult {
   apiVersion: string;
   schema: Record<string, unknown>;
   codec: Codec;
+  providerCompatErrors?: ProviderCompatError[];
 }
 
 export interface RehydrateResult {
@@ -271,7 +291,8 @@ export type ErrorCode =
   | "unsupported_feature"
   | "unresolvable_ref"
   | "rehydration_error"
-  | "codec_version_mismatch";
+  | "codec_version_mismatch"
+  | "provider_compat_failure";
 
 export interface StructuredError {
   code: ErrorCode;
