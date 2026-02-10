@@ -12,7 +12,7 @@ We need a formal, deterministic algorithm that converts **any valid JSON Schema*
 
 ---
 
-## The Algorithm: 8-Pass Compiler Pipeline
+## The Algorithm: 9-Pass Compiler Pipeline
 
 > [!IMPORTANT]
 > JSON Schema is designed for **validation** (permissive — "is this valid?"). LLM structured output is designed for **generation** (restrictive — "what shape must I produce?"). The algorithm bridges this gap by making all implicit constraints explicit.
@@ -96,6 +96,15 @@ The algorithm targets **OpenAI Strict Mode** as the baseline compilation target 
 > [!TIP]
 > **Round 4 — Enum Default-First Sorting.** Before stripping `default`, reorder `enum` to place the default value at index 0. LLMs bias toward first options when context is weak.
 
+### Pass 9: Provider Compatibility Checks
+
+| Property       | Value                                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Detects**    | Non-object root types; schema depth exceeding provider limits; mixed-type enums; unconstrained boolean/empty sub-schemas                           |
+| **Transforms** | Root wrapping: non-object roots wrapped in `{type: object, properties: {result: <original>}}` with `RootObjectWrapper` codec entry for rehydration |
+| **Lossy**      | No — root wrapping is reversed by the rehydrator via codec                                                                                         |
+| **Ordering**   | **Last pass** — runs after all structural transforms. Advisory diagnostics do not block output.                                                    |
+
 ---
 
 ## Rehydration Codec
@@ -170,8 +179,9 @@ The algorithm targets **OpenAI Strict Mode** as the baseline compilation target 
 | 7        | Pass 0     | Normalization         | ✅ Implemented |
 | 8        | Pass 5     | Recursion Breaking    | ✅ Implemented |
 | 9        | Pass 7     | Constraint Pruning    | ✅ Implemented |
-| 10       | Pipeline   | `convert()` wiring    | ✅ Implemented |
-| 11       | CLI        | `jsonschema-llm`      | ✅ Implemented |
+| 10       | Pass 9     | Provider Compat       | ✅ Implemented |
+| 11       | Pipeline   | `convert()` wiring    | ✅ Implemented |
+| 12       | CLI        | `jsonschema-llm`      | ✅ Implemented |
 
 > [!NOTE]
 > This table reflects the shipped v0.1 state. All passes and the CLI are implemented.
@@ -197,7 +207,7 @@ jsonschema-llm/
 │   └── jsonschema-llm-core/   # Rust core library
 │       └── src/
 │           ├── lib.rs          # Public API (convert + rehydrate)
-│           ├── passes/         # One module per pass (p0–p7)
+│           ├── passes/         # One module per pass (p0–p9)
 │           ├── codec.rs        # Codec builder
 │           ├── rehydrator.rs   # Reverse transforms
 │           └── schema_utils.rs # Shared path/traversal utilities

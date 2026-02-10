@@ -180,7 +180,7 @@ The converted schemas were accepted by **OpenAI Strict Mode**. The LLM generated
 
 <a id="algorithm"></a>
 
-## Algorithm: The 8-Pass Compiler Pipeline
+## Algorithm: The 9-Pass Compiler Pipeline
 
 `jsonschema-llm` transforms schemas through 9 ordered passes, each handling a specific incompatibility. The passes are **ordered** (each assumes previous output), **deterministic**, **provider-aware** (passes are skipped/relaxed per target), **mode-aware** (strict vs permissive), and **metadata-preserving** (every lossy change records how to reverse it).
 
@@ -294,7 +294,7 @@ rehydrated = rehydrate(llm_output, result["codec"])
 │                                              │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
 │  │ Converter│  │  Codec   │  │Rehydrator │  │
-│  │ (8 pass) │  │ Builder  │  │           │  │
+│  │ (9 pass) │  │ Builder  │  │           │  │
 │  └──────────┘  └──────────┘  └───────────┘  │
 └──────────────┬───────────────────────────────┘
                │

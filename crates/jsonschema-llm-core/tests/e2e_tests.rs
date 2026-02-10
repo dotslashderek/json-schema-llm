@@ -1,4 +1,4 @@
-//! End-to-end integration tests that exercise the full 8-pass pipeline
+//! End-to-end integration tests that exercise the full 9-pass pipeline
 //! against fixture schemas. These complement the existing `pipeline_tests.rs`
 //! by using file-based fixtures covering every pass combination.
 
