@@ -105,3 +105,7 @@ jobs:
       - name: Run Node.js contract tests
         run: pnpm test
         working-directory: tests/contract-node
+
+      - name: TypeScript type-check
+        run: pnpm run typecheck
+        working-directory: tests/contract-node
