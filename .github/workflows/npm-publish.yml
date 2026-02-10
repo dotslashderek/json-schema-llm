@@ -8,6 +8,7 @@ jobs:
   publish:
     name: Build & Publish WASM to npm
     runs-on: ubuntu-latest
+    if: startsWith(github.ref_name, 'v')
     permissions:
       contents: read
       id-token: write # npm provenance

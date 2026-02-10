@@ -63,9 +63,10 @@ if [ -f "README-npm.md" ]; then
   cp README-npm.md "${DIST}/README.md"
 fi
 
-# 5. Remove wasm-pack artifacts we don't need
+# 5. Clean up wasm-pack artifacts
 rm -f "${DIST}/.gitignore"
-rm -f "${DIST}/LICENSE"
+# Replace wasm-pack placeholder LICENSE with repo's canonical license
+cp LICENSE "${DIST}/LICENSE"
 
 echo "==> Done. Package contents:"
 ls -la "${DIST}/"
