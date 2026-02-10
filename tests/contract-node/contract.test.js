@@ -147,10 +147,11 @@ describe("rehydrate", () => {
     expect(Array.isArray(result.warnings)).toBe(true);
   });
 
-  it("rehydrate with dropped constraints → non-empty droppedConstraints", () => {
-    // kitchen_sink has constraints that get dropped for openai-strict
-    const kitchenSink = FIXTURES.find((f) => f.name === "kitchen_sink");
-    if (!kitchenSink) return; // skip if fixture missing
+  const kitchenSink = FIXTURES.find((f) => f.name === "kitchen_sink");
+
+  it.skipIf(!kitchenSink)(
+    "rehydrate with dropped constraints → non-empty droppedConstraints",
+    () => {
 
     const { codec } = wasm.convert(kitchenSink.schema, {
       target: "openai-strict",
@@ -166,7 +167,8 @@ describe("rehydrate", () => {
     const result = wasm.rehydrate({}, codec);
     expect(result).toHaveProperty("apiVersion", "1.0");
     expect(Array.isArray(result.warnings)).toBe(true);
-  });
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
