@@ -148,7 +148,7 @@ fn test_e2e_fixture_codec_entry_counts() {
         ("opaque", 6),
         ("allof", 3),
         ("recursive", 5),
-        ("kitchen_sink", 21),
+        ("kitchen_sink", 22),
     ];
 
     // Cache results to avoid duplicate convert calls

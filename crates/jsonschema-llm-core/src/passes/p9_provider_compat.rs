@@ -106,7 +106,12 @@ fn extract_root_types(schema: &Value) -> Vec<String> {
     }
 }
 
-/// Wraps non-object roots in `{ type: object, properties: { result: <original> }, ... }`.
+/// Wraps non-object roots or roots with combinators in
+/// `{ type: object, properties: { result: <original> }, ... }`.
+///
+/// OpenAI strict mode requires the root schema to:
+///   1. Have `type: "object"`
+///   2. NOT have `anyOf`/`oneOf`/`allOf`/`not`/`enum` at the top level
 fn check_root_type(
     schema: &Value,
     target: Target,
@@ -114,26 +119,51 @@ fn check_root_type(
     transforms: &mut Vec<Transform>,
 ) -> Value {
     let root_types = extract_root_types(schema);
+    let is_object = root_types.len() == 1 && root_types[0] == "object";
 
-    // Strict: only skip wrapping if type is exactly "object" (not ["object", "null"])
-    if root_types.len() == 1 && root_types[0] == "object" {
+    // Check for root-level combinators that OpenAI rejects
+    let combinator_keywords = ["anyOf", "oneOf", "allOf", "not", "enum"];
+    let has_root_combinator = combinator_keywords
+        .iter()
+        .any(|kw| schema.get(*kw).is_some());
+
+    // Strict: only skip wrapping if type is exactly "object" AND no root combinators
+    if is_object && !has_root_combinator {
         return schema.clone();
     }
 
-    let actual_type = if root_types.is_empty() {
-        "unspecified".to_string()
-    } else {
-        root_types.join(", ")
-    };
+    // Determine the reason for wrapping
+    if !is_object {
+        let actual_type = if root_types.is_empty() {
+            "unspecified".to_string()
+        } else {
+            root_types.join(", ")
+        };
+        errors.push(ProviderCompatError::RootTypeIncompatible {
+            actual_type: actual_type.clone(),
+            target,
+            hint: format!(
+                "Schema root type '{}' is not 'object'. Wrapping in {{ \"result\": <original> }}.",
+                actual_type,
+            ),
+        });
+    }
 
-    errors.push(ProviderCompatError::RootTypeIncompatible {
-        actual_type: actual_type.clone(),
-        target,
-        hint: format!(
-            "Schema root type '{}' is not 'object'. Wrapping in {{ \"result\": <original> }}.",
-            actual_type,
-        ),
-    });
+    if has_root_combinator {
+        let found: Vec<&str> = combinator_keywords
+            .iter()
+            .filter(|kw| schema.get(**kw).is_some())
+            .copied()
+            .collect();
+        errors.push(ProviderCompatError::RootTypeIncompatible {
+            actual_type: found.join(", "),
+            target,
+            hint: format!(
+                "Root schema has {} which OpenAI strict mode forbids at the top level. Wrapping.",
+                found.join("/"),
+            ),
+        });
+    }
 
     transforms.push(Transform::RootObjectWrapper {
         path: "#".to_string(),

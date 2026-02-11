@@ -186,64 +186,8 @@
                                                   "additionalProperties": false,
                                                   "properties": {
                                                     "children": {
-                                                      "anyOf": [
-                                                        {
-                                                          "items": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                              "children": {
-                                                                "anyOf": [
-                                                                  {
-                                                                    "items": {
-                                                                      "additionalProperties": false,
-                                                                      "properties": {
-                                                                        "children": {
-                                                                          "anyOf": [
-                                                                            {
-                                                                              "items": {
-                                                                                "description": "JSON-encoded OrgNode. Parse as JSON after generation.",
-                                                                                "type": "string"
-                                                                              },
-                                                                              "type": "array"
-                                                                            },
-                                                                            {
-                                                                              "type": "null"
-                                                                            }
-                                                                          ]
-                                                                        },
-                                                                        "name": {
-                                                                          "type": "string"
-                                                                        }
-                                                                      },
-                                                                      "required": [
-                                                                        "children",
-                                                                        "name"
-                                                                      ],
-                                                                      "type": "object"
-                                                                    },
-                                                                    "type": "array"
-                                                                  },
-                                                                  {
-                                                                    "type": "null"
-                                                                  }
-                                                                ]
-                                                              },
-                                                              "name": {
-                                                                "type": "string"
-                                                              }
-                                                            },
-                                                            "required": [
-                                                              "children",
-                                                              "name"
-                                                            ],
-                                                            "type": "object"
-                                                          },
-                                                          "type": "array"
-                                                        },
-                                                        {
-                                                          "type": "null"
-                                                        }
-                                                      ]
+                                                      "description": "A JSON-encoded string. Structure: any. Produce valid, parseable JSON.",
+                                                      "type": "string"
                                                     },
                                                     "name": {
                                                       "type": "string"
