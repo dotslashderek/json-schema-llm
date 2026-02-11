@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::codec::{Codec, Transform, CODEC_MAJOR_VERSION};
 use crate::codec_warning::{Warning, WarningKind};
@@ -27,7 +27,8 @@ pub struct RehydrateResult {
 /// Rehydrate LLM output using the codec sidecar.
 ///
 /// Applies transforms in REVERSE order (LIFO) to undo the stack of changes,
-/// then validates dropped constraints and collects warnings.
+/// then enforces enforceable dropped constraints (clamp/truncate) and validates
+/// the rest.
 pub fn rehydrate(data: &Value, codec: &Codec) -> Result<RehydrateResult, ConvertError> {
     // Validate codec version — hard-fail on incompatible major version
     validate_codec_version(codec)?;
@@ -56,11 +57,16 @@ pub fn rehydrate(data: &Value, codec: &Codec) -> Result<RehydrateResult, Convert
         apply_transform(&mut result, &seg_refs, transform, &regex_cache)?;
     }
 
-    let warnings = validate_constraints(&result, codec, &regex_cache);
+    // Enforce enforceable constraints (clamp/truncate) before validation
+    let mut enforcement_warnings = enforce_constraints(&mut result, codec, &regex_cache);
+
+    // Validate remaining constraints (pattern, min*, etc.) as advisory warnings
+    let mut validation_warnings = validate_constraints(&result, codec, &regex_cache);
+    enforcement_warnings.append(&mut validation_warnings);
 
     Ok(RehydrateResult {
         data: result,
-        warnings,
+        warnings: enforcement_warnings,
     })
 }
 
@@ -300,7 +306,7 @@ fn execute_transform(data: &mut Value, transform: &Transform) -> Result<(), Conv
         Transform::RootObjectWrapper { wrapper_key, .. } => {
             // Unwrap: extract data[wrapper_key] and promote it to root.
             // Fail loudly if the wrapper object is missing/invalid to avoid silently
-            // accepting malformed LLM output or discarding unexpected keys.
+            // accepting malformed LLM output.
             let obj = data.as_object_mut().ok_or_else(|| {
                 ConvertError::RehydrationError(format!(
                     "Expected root object with wrapper key `{}` but found non-object value",
@@ -315,12 +321,24 @@ fn execute_transform(data: &mut Value, transform: &Transform) -> Result<(), Conv
                 )));
             }
 
-            // Reject unexpected extra keys to avoid silently discarding data.
-            if obj.len() != 1 {
-                return Err(ConvertError::RehydrationError(format!(
-                    "Unexpected extra keys in root wrapper object; expected only `{}`",
-                    wrapper_key
-                )));
+            // LLMs (especially OpenAI with anyOf schemas) sometimes leak properties
+            // from inner branches to the outer wrapper object. Strip extra keys
+            // with a warning rather than hard-failing, since the wrapper key's data
+            // is still intact and usable.
+            if obj.len() > 1 {
+                let extra_keys: Vec<String> = obj
+                    .keys()
+                    .filter(|k| k.as_str() != wrapper_key)
+                    .cloned()
+                    .collect();
+                tracing::warn!(
+                    "Root wrapper object had extra keys beyond `{}`: {:?}; stripping",
+                    wrapper_key,
+                    extra_keys
+                );
+                for key in &extra_keys {
+                    obj.remove(key);
+                }
             }
 
             if let Some(inner) = obj.remove(wrapper_key) {
@@ -940,6 +958,300 @@ fn check_constraint(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Constraint enforcement (clamp/truncate)
+// ---------------------------------------------------------------------------
+
+/// Constraints that can be automatically enforced by modifying data.
+const ENFORCEABLE_CONSTRAINTS: &[&str] = &[
+    "maximum",
+    "minimum",
+    "exclusiveMaximum",
+    "exclusiveMinimum",
+    "maxLength",
+    "maxItems",
+];
+
+/// Enforce dropped constraints by modifying data in-place.
+///
+/// For constraints where we can safely fix violations without data loss:
+/// - `maximum` / `minimum`: clamp numeric values
+/// - `exclusiveMaximum` / `exclusiveMinimum`: clamp to boundary ± 1
+/// - `maxLength`: truncate strings
+/// - `maxItems`: truncate arrays
+///
+/// Returns warnings for each enforcement action taken.
+fn enforce_constraints(
+    data: &mut Value,
+    codec: &Codec,
+    regex_cache: &HashMap<String, Result<Regex, String>>,
+) -> Vec<Warning> {
+    let mut warnings = Vec::new();
+
+    for dc in &codec.dropped_constraints {
+        if !ENFORCEABLE_CONSTRAINTS.contains(&dc.constraint.as_str()) {
+            continue;
+        }
+
+        // Locate mutable data nodes for this constraint's path
+        let segments = split_path(&dc.path);
+        let mut data_paths: Vec<String> = Vec::new();
+        collect_data_paths(
+            data,
+            &segments,
+            0,
+            String::new(),
+            &mut data_paths,
+            regex_cache,
+        );
+
+        for data_path in &data_paths {
+            // Navigate to the mutable node using the data path
+            let node = match navigate_to_mut(data, data_path) {
+                Some(n) => n,
+                None => continue,
+            };
+
+            if let Some(msg) = enforce_single_constraint(node, &dc.constraint, &dc.value) {
+                warnings.push(Warning {
+                    data_path: if data_path.is_empty() {
+                        "/".to_string()
+                    } else {
+                        data_path.clone()
+                    },
+                    schema_path: dc.path.clone(),
+                    kind: WarningKind::ConstraintViolation {
+                        constraint: dc.constraint.clone(),
+                    },
+                    message: msg,
+                });
+            }
+        }
+    }
+
+    warnings
+}
+
+/// Collect JSON Pointer data paths for a schema path.
+///
+/// Similar to `locate_data_nodes` but only collects paths (not references),
+/// so we can later navigate mutably.
+fn collect_data_paths(
+    data: &Value,
+    segments: &[String],
+    pos: usize,
+    current_path: String,
+    out: &mut Vec<String>,
+    regex_cache: &HashMap<String, Result<Regex, String>>,
+) {
+    if pos >= segments.len() {
+        out.push(current_path);
+        return;
+    }
+
+    let segment = segments[pos].as_str();
+
+    // Schema-structural: skip single
+    if SKIP_SINGLE.contains(&segment) {
+        collect_data_paths(data, segments, pos + 1, current_path, out, regex_cache);
+        return;
+    }
+
+    // Schema-structural: skip pair
+    if SKIP_PAIR.contains(&segment) {
+        if segment == "patternProperties" {
+            if let Some(obj) = data.as_object() {
+                if let Some(pattern_segment) = segments.get(pos + 1) {
+                    if let Some(Ok(re)) = regex_cache.get(pattern_segment.as_str()) {
+                        for (key, val) in obj {
+                            if re.is_match(key) {
+                                let child_path =
+                                    format!("{}/{}", current_path, escape_pointer_segment(key));
+                                collect_data_paths(
+                                    val,
+                                    segments,
+                                    pos + 2,
+                                    child_path,
+                                    out,
+                                    regex_cache,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        if pos + 1 >= segments.len() {
+            return;
+        }
+        collect_data_paths(data, segments, pos + 2, current_path, out, regex_cache);
+        return;
+    }
+
+    // items → iterate array
+    if segment == "items" {
+        if let Some(arr) = data.as_array() {
+            for (i, item) in arr.iter().enumerate() {
+                let child_path = format!("{}/{}", current_path, i);
+                collect_data_paths(item, segments, pos + 1, child_path, out, regex_cache);
+            }
+        }
+        return;
+    }
+
+    // Numeric index
+    if let Ok(index) = segment.parse::<usize>() {
+        if let Some(arr) = data.as_array() {
+            if let Some(item) = arr.get(index) {
+                let child_path = format!("{}/{}", current_path, index);
+                collect_data_paths(item, segments, pos + 1, child_path, out, regex_cache);
+            }
+        }
+        return;
+    }
+
+    // properties → navigate into object
+    if segment == "properties" {
+        if let Some(key) = segments.get(pos + 1) {
+            if let Some(obj) = data.as_object() {
+                if let Some(child) = obj.get(key.as_str()) {
+                    let child_path = format!("{}/{}", current_path, escape_pointer_segment(key));
+                    collect_data_paths(child, segments, pos + 2, child_path, out, regex_cache);
+                }
+            }
+        }
+    }
+}
+
+/// Navigate to a mutable value using a JSON Pointer data path.
+fn navigate_to_mut<'a>(data: &'a mut Value, pointer: &str) -> Option<&'a mut Value> {
+    if pointer.is_empty() {
+        return Some(data);
+    }
+    // JSON pointer segments are separated by '/'
+    let segments: Vec<&str> = pointer.split('/').filter(|s| !s.is_empty()).collect();
+    let mut current = data;
+    for seg in segments {
+        if let Ok(idx) = seg.parse::<usize>() {
+            current = current.as_array_mut()?.get_mut(idx)?;
+        } else {
+            current = current.as_object_mut()?.get_mut(seg)?;
+        }
+    }
+    Some(current)
+}
+
+/// Enforce a single constraint on a value, modifying it in-place if needed.
+///
+/// Returns `Some(message)` if the value was modified, `None` if no action needed.
+fn enforce_single_constraint(
+    value: &mut Value,
+    constraint: &str,
+    expected: &Value,
+) -> Option<String> {
+    match constraint {
+        "maximum" => {
+            let bound_f = expected.as_f64()?;
+            let actual_f = value.as_f64()?;
+            if actual_f > bound_f {
+                let msg = format!("value {} exceeded maximum {}; clamped", actual_f, bound_f);
+                // Preserve integer type if the bound is integer
+                if let Some(bound_i) = expected.as_i64() {
+                    *value = Value::Number(serde_json::Number::from(bound_i));
+                } else {
+                    *value = json!(bound_f);
+                }
+                return Some(msg);
+            }
+            None
+        }
+        "minimum" => {
+            let bound_f = expected.as_f64()?;
+            let actual_f = value.as_f64()?;
+            if actual_f < bound_f {
+                let msg = format!("value {} below minimum {}; clamped", actual_f, bound_f);
+                if let Some(bound_i) = expected.as_i64() {
+                    *value = Value::Number(serde_json::Number::from(bound_i));
+                } else {
+                    *value = json!(bound_f);
+                }
+                return Some(msg);
+            }
+            None
+        }
+        "exclusiveMaximum" => {
+            let bound_f = expected.as_f64()?;
+            let actual_f = value.as_f64()?;
+            if actual_f >= bound_f {
+                // Clamp to bound - 1 for integers, bound - epsilon for floats
+                let msg = format!(
+                    "value {} not less than exclusive maximum {}; clamped",
+                    actual_f, bound_f
+                );
+                if let Some(bound_i) = expected.as_i64() {
+                    *value = Value::Number(serde_json::Number::from(bound_i - 1));
+                } else {
+                    *value = json!(bound_f - f64::EPSILON);
+                }
+                return Some(msg);
+            }
+            None
+        }
+        "exclusiveMinimum" => {
+            let bound_f = expected.as_f64()?;
+            let actual_f = value.as_f64()?;
+            if actual_f <= bound_f {
+                let msg = format!(
+                    "value {} not greater than exclusive minimum {}; clamped",
+                    actual_f, bound_f
+                );
+                if let Some(bound_i) = expected.as_i64() {
+                    *value = Value::Number(serde_json::Number::from(bound_i + 1));
+                } else {
+                    *value = json!(bound_f + f64::EPSILON);
+                }
+                return Some(msg);
+            }
+            None
+        }
+        "maxLength" => {
+            let bound = expected.as_u64()? as usize;
+            if let Some(s) = value.as_str() {
+                let char_count = s.chars().count();
+                if char_count > bound {
+                    let msg = format!(
+                        "string length {} exceeded maxLength {}; truncated",
+                        char_count, bound
+                    );
+                    let truncated: String = s.chars().take(bound).collect();
+                    *value = Value::String(truncated);
+                    return Some(msg);
+                }
+            }
+            None
+        }
+        "maxItems" => {
+            if let Some(arr) = value.as_array() {
+                let bound = expected.as_u64()? as usize;
+                if arr.len() > bound {
+                    let msg = format!(
+                        "array length {} exceeded maxItems {}; truncated",
+                        arr.len(),
+                        bound
+                    );
+                    let truncated: Vec<Value> = arr.iter().take(bound).cloned().collect();
+                    *value = Value::Array(truncated);
+                    return Some(msg);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 /// Validate the codec version against the expected major version.
 ///
 /// The `$schema` URI is expected to end with `/v{major}` (e.g.
@@ -1398,7 +1710,11 @@ mod tests {
         let data = json!({"age": 15});
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(result.warnings.len(), 1);
-        assert!(result.warnings[0].message.contains("less than minimum"));
+        // Enforcement clamps the value and uses "below minimum" message
+        assert!(result.warnings[0].message.contains("below minimum"));
+        assert!(result.warnings[0].message.contains("clamped"));
+        // Data should be clamped to the minimum
+        assert_eq!(result.data["age"], json!(18));
     }
 
     // Test 21: Maximum pass — no warning
@@ -1417,7 +1733,6 @@ mod tests {
         assert!(result.warnings.is_empty());
     }
 
-    // Test 22: maxLength violation
     #[test]
     fn test_maxlength_warning() {
         use crate::codec::DroppedConstraint;
@@ -1431,7 +1746,11 @@ mod tests {
         let data = json!({"name": "toolong"});
         let result = rehydrate(&data, &codec).unwrap();
         assert_eq!(result.warnings.len(), 1);
-        assert!(result.warnings[0].message.contains("exceeds maxLength"));
+        // Enforcement truncates and uses "exceeded maxLength" message
+        assert!(result.warnings[0].message.contains("exceeded maxLength"));
+        assert!(result.warnings[0].message.contains("truncated"));
+        // Data should be truncated to 3 chars
+        assert_eq!(result.data["name"], json!("too"));
     }
 
     // Test 23: Advisory if/then/else warning
@@ -1622,18 +1941,30 @@ mod tests {
         });
 
         let result = rehydrate(&data, &codec).unwrap();
+        // 5 warnings: exclusiveMinimum (enforced), exclusiveMaximum (enforced),
+        // minLength (advisory), minItems (advisory), maxItems (enforced)
         assert_eq!(result.warnings.len(), 5);
 
         let msgs: Vec<&str> = result.warnings.iter().map(|w| w.message.as_str()).collect();
+        // Enforcement messages for enforceable constraints
         assert!(msgs
             .iter()
-            .any(|m| m.contains("not greater than exclusive minimum")));
+            .any(|m| m.contains("not greater than exclusive minimum") && m.contains("clamped")));
         assert!(msgs
             .iter()
-            .any(|m| m.contains("not less than exclusive maximum")));
+            .any(|m| m.contains("not less than exclusive maximum") && m.contains("clamped")));
+        // Advisory messages for non-enforceable constraints
         assert!(msgs.iter().any(|m| m.contains("less than minLength")));
         assert!(msgs.iter().any(|m| m.contains("less than minItems")));
-        assert!(msgs.iter().any(|m| m.contains("exceeds maxItems")));
+        // Enforcement message for maxItems
+        assert!(msgs
+            .iter()
+            .any(|m| m.contains("exceeded maxItems") && m.contains("truncated")));
+
+        // Verify data was enforced
+        assert_eq!(result.data["ex_min"], json!(11)); // clamped to exclusive min + 1
+        assert_eq!(result.data["ex_max"], json!(19)); // clamped to exclusive max - 1
+        assert_eq!(result.data["max_items"], json!([1, 2])); // truncated to 2
     }
 
     // Test: RecursiveInflate rehydration round-trip

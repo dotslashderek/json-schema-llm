@@ -39,6 +39,7 @@
     "age": {
       "anyOf": [
         {
+          "description": "Constraints: minimum value: 0; maximum value: 200.",
           "type": "integer"
         },
         {
@@ -47,12 +48,14 @@
       ]
     },
     "contacts": {
+      "description": "Constraints: minimum 1 item(s).",
       "items": {
         "anyOf": [
           {
             "additionalProperties": false,
             "properties": {
               "address": {
+                "description": "Constraints: format: email.",
                 "type": "string"
               },
               "method": {
@@ -117,9 +120,11 @@
       ]
     },
     "id": {
+      "description": "Constraints: minimum length: 1 character(s).",
       "type": "string"
     },
     "name": {
+      "description": "Constraints: maximum length: 100 character(s).",
       "type": "string"
     },
     "notes": {
@@ -136,6 +141,7 @@
             "timestamp": {
               "anyOf": [
                 {
+                  "description": "Constraints: format: date-time.",
                   "type": "string"
                 },
                 {
