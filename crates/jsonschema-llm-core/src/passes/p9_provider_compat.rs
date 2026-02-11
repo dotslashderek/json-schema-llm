@@ -368,7 +368,7 @@ impl CompatVisitor<'_> {
                 max_depth: OPENAI_MAX_DEPTH,
                 target: self.target,
                 hint: format!(
-                    "Sub-schema at '{}' exceeds depth limit {}. Replaced with opaque string.",
+                    "Sub-schema at '{}' reaches depth limit {}. Replaced with opaque string.",
                     path, OPENAI_MAX_DEPTH,
                 ),
             });
