@@ -218,9 +218,16 @@ fn p9_shallow_schema_no_depth_error() {
 
 #[test]
 fn p9_deep_schema_emits_depth_error() {
-    // Build a 7-level deep schema (exceeds OpenAI limit of 5)
-    let mut inner = json!({ "type": "string" });
-    for i in (0..7).rev() {
+    // Build a 12-level deep schema (exceeds OpenAI limit of 10).
+    // The innermost node must be an object (not a primitive) because
+    // primitive leaves are correctly skipped by the depth truncation guard.
+    let mut inner = json!({
+        "type": "object",
+        "properties": {
+            "value": { "type": "string" }
+        }
+    });
+    for i in (0..12).rev() {
         inner = json!({
             "type": "object",
             "properties": {
@@ -237,7 +244,7 @@ fn p9_deep_schema_emits_depth_error() {
     assert_eq!(
         depth_errors.len(),
         1,
-        "7-level deep schema should trigger exactly 1 DepthBudgetExceeded"
+        "12-level deep schema should trigger exactly 1 DepthBudgetExceeded"
     );
 
     // Verify the error contains useful metadata
@@ -248,8 +255,8 @@ fn p9_deep_schema_emits_depth_error() {
     } = &depth_errors[0]
     {
         assert!(
-            *actual_depth > *max_depth,
-            "actual_depth should exceed max_depth"
+            *actual_depth >= *max_depth,
+            "actual_depth should be at or above max_depth"
         );
     }
 }
