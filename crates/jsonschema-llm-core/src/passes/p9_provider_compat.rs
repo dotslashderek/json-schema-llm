@@ -171,34 +171,22 @@ impl CompatVisitor<'_> {
                 schema_kind: format!("boolean({})", b),
                 target: self.target,
                 hint: format!(
-                    "Boolean schema '{}' replaced with {}.",
-                    b,
-                    if b {
-                        "opaque string (accepts any JSON-encoded value)"
-                    } else {
-                        "sealed empty object (rejects all values)"
-                    }
+                    "Boolean schema '{}' replaced with opaque string.",
+                    b
                 ),
             });
 
-            if b {
-                // `true` → opaque string (same as p4 stringification)
-                *schema = json!({
-                    "type": "string",
-                    "description": "A JSON-encoded string representing the object. Parse with JSON.parse() after generation."
-                });
-                self.transforms.push(Transform::JsonStringParse {
-                    path: path.to_string(),
-                });
-            } else {
-                // `false` → sealed empty object (unsatisfiable but structurally valid)
-                *schema = json!({
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                    "additionalProperties": false
-                });
-            }
+            // Both `true` and `false` → opaque string.
+            // `true` accepts everything → stringify for round-trip.
+            // `false` rejects everything → no provider-safe unsatisfiable schema exists,
+            //   so we use opaque string as the safest approximation.
+            *schema = json!({
+                "type": "string",
+                "description": "A JSON-encoded string representing the object. Parse with JSON.parse() after generation."
+            });
+            self.transforms.push(Transform::JsonStringParse {
+                path: path.to_string(),
+            });
             return;
         }
 
@@ -345,13 +333,16 @@ fn fix_enum_homogeneity(
     let types_found: Vec<String> = types.into_iter().map(|s| s.to_string()).collect();
     let original_values: Vec<Value> = enum_vals.clone();
 
-    // Stringify all values
+    // Stringify all values and deduplicate (e.g. [1, "1"] → ["1"] not ["1", "1"])
+    let mut seen = std::collections::HashSet::new();
     let stringified: Vec<Value> = original_values
         .iter()
         .map(|v| match v {
-            Value::String(s) => Value::String(s.clone()),
-            other => Value::String(other.to_string()),
+            Value::String(s) => s.clone(),
+            other => other.to_string(),
         })
+        .filter(|s| seen.insert(s.clone()))
+        .map(Value::String)
         .collect();
 
     // Replace enum in-place

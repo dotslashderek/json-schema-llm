@@ -18,8 +18,8 @@ fn clean_fixtures() -> Vec<&'static str> {
     vec!["simple", "discriminator", "opaque", "allof"]
 }
 
-/// Fixtures that trigger advisory provider compat warnings (e.g. depth budget)
-/// but still produce valid output. The CLI exits 1 for these.
+/// Fixtures that trigger advisory provider compat diagnostics (e.g. depth budget)
+/// but still produce valid output. The CLI exits 0 (transforms were applied).
 fn warned_fixtures() -> Vec<&'static str> {
     vec!["maps", "kitchen_sink", "recursive"]
 }
@@ -59,7 +59,7 @@ fn test_cli_e2e_convert_all_fixtures() {
         validate_outputs(name, &output, &codec);
     }
 
-    // Warned fixtures: exit 1 with provider compat warnings, but output is valid
+    // Warned fixtures: exit 0 with advisory diagnostics on stderr, output is valid
     for name in warned_fixtures() {
         let input = format!("{FIXTURES_DIR}/{name}.json");
         let output = dir.path().join(format!("{name}.converted.json"));
@@ -70,8 +70,8 @@ fn test_cli_e2e_convert_all_fixtures() {
             .args(["-o", output.to_str().unwrap()])
             .args(["--codec", codec.to_str().unwrap()])
             .assert()
-            .failure()
-            .stderr(predicate::str::contains("Provider compatibility check"));
+            .success()
+            .stderr(predicate::str::contains("Provider compatibility diagnostics"));
 
         validate_outputs(name, &output, &codec);
     }
