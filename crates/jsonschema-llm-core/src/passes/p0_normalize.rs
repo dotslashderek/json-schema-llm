@@ -341,9 +341,12 @@ fn recurse_children(
     depth: usize,
     ctx: &mut RefContext<'_>,
 ) -> Result<(), ConvertError> {
-    crate::schema_utils::recurse_into_children(obj, path, depth, &mut |val, child_path, child_depth| {
-        resolve_refs(val, child_path, child_depth, ctx)
-    })
+    crate::schema_utils::recurse_into_children(
+        obj,
+        path,
+        depth,
+        &mut |val, child_path, child_depth| resolve_refs(val, child_path, child_depth, ctx),
+    )
 }
 
 // ---------------------------------------------------------------------------

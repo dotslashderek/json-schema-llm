@@ -22,7 +22,15 @@ use crate::schema_utils::build_path;
 use serde_json::{json, Value};
 
 /// OpenAI Strict Mode maximum nesting depth.
-const OPENAI_MAX_DEPTH: usize = 5;
+///
+/// OpenAI enforces a 10-level nesting limit for structured output schemas.
+/// Schemas exceeding this are rejected with:
+///   "N levels of nesting exceeds limit of 10"
+///
+/// Our `semantic_depth` counter tracks data-shape edges (properties, items,
+/// additionalProperties, etc.) which maps 1:1 to OpenAI's nesting count.
+/// Combinators (anyOf, oneOf, allOf) do NOT increment semantic depth.
+const OPENAI_MAX_DEPTH: usize = 10;
 
 /// Hard guard against infinite recursion in traversal.
 const HARD_RECURSION_LIMIT: usize = 100;
@@ -90,7 +98,10 @@ pub fn check_provider_compat(schema: &Value, config: &ConvertOptions) -> Provide
 fn extract_root_types(schema: &Value) -> Vec<String> {
     match schema.get("type") {
         Some(Value::String(s)) => vec![s.clone()],
-        Some(Value::Array(arr)) => arr.iter().filter_map(|v| v.as_str().map(String::from)).collect(),
+        Some(Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect(),
         _ => vec![],
     }
 }
@@ -599,12 +610,21 @@ mod tests {
             "nullable object root should be wrapped"
         );
         // actual_type should mention both types
-        let root_err = r.errors.iter().find(|e| matches!(e, ProviderCompatError::RootTypeIncompatible { .. }));
+        let root_err = r
+            .errors
+            .iter()
+            .find(|e| matches!(e, ProviderCompatError::RootTypeIncompatible { .. }));
         assert!(root_err.is_some(), "should emit RootTypeIncompatible error");
         match root_err.unwrap() {
             ProviderCompatError::RootTypeIncompatible { actual_type, .. } => {
-                assert!(actual_type.contains("object"), "actual_type should list 'object'");
-                assert!(actual_type.contains("null"), "actual_type should list 'null'");
+                assert!(
+                    actual_type.contains("object"),
+                    "actual_type should list 'object'"
+                );
+                assert!(
+                    actual_type.contains("null"),
+                    "actual_type should list 'null'"
+                );
             }
             _ => unreachable!(),
         }
@@ -621,12 +641,21 @@ mod tests {
                 .any(|t| matches!(t, Transform::RootObjectWrapper { .. })),
             "non-object type array should be wrapped"
         );
-        let root_err = r.errors.iter().find(|e| matches!(e, ProviderCompatError::RootTypeIncompatible { .. }));
+        let root_err = r
+            .errors
+            .iter()
+            .find(|e| matches!(e, ProviderCompatError::RootTypeIncompatible { .. }));
         assert!(root_err.is_some(), "should emit RootTypeIncompatible error");
         match root_err.unwrap() {
             ProviderCompatError::RootTypeIncompatible { actual_type, .. } => {
-                assert!(actual_type.contains("string"), "actual_type should list 'string'");
-                assert!(actual_type.contains("null"), "actual_type should list 'null'");
+                assert!(
+                    actual_type.contains("string"),
+                    "actual_type should list 'string'"
+                );
+                assert!(
+                    actual_type.contains("null"),
+                    "actual_type should list 'null'"
+                );
             }
             _ => unreachable!(),
         }
@@ -645,9 +674,9 @@ mod tests {
 
     #[test]
     fn deep_emits_error() {
-        // Build 7 levels deep — should trigger truncation at depth limit
+        // Build 12 levels deep — exceeds OPENAI_MAX_DEPTH (10)
         let mut inner = json!({"type": "string"});
-        for i in (0..7).rev() {
+        for i in (0..12).rev() {
             inner = json!({"type": "object", "properties": {format!("l{i}"): inner}});
         }
         let r = check_provider_compat(&inner, &opts());
@@ -674,21 +703,21 @@ mod tests {
 
     #[test]
     fn deep_schema_truncated_at_limit() {
-        // Build 7 levels deep: root -> l0 -> l1 -> l2 -> l3 -> l4 -> l5 -> l6(string)
-        // At OPENAI_MAX_DEPTH (5), the sub-tree should become opaque string
+        // Build 12 levels deep: root -> l0 -> ... -> l11(string)
+        // At OPENAI_MAX_DEPTH (10), the sub-tree should become opaque string
         let mut inner = json!({"type": "string"});
-        for i in (0..7).rev() {
+        for i in (0..12).rev() {
             inner = json!({"type": "object", "properties": {format!("l{i}"): inner}});
         }
         let r = check_provider_compat(&inner, &opts());
 
-        // The sub-tree at depth >= 5 should be replaced with opaque string
+        // The sub-tree at depth >= 10 should be replaced with opaque string
         // Navigate to the deepening path and check for truncation
         let mut cursor = &r.schema;
-        for i in 0..5 {
+        for i in 0..10 {
             cursor = &cursor["properties"][format!("l{i}")];
         }
-        // At depth 5, the schema should be an opaque string placeholder
+        // At depth 10, the schema should be an opaque string placeholder
         assert_eq!(
             cursor.get("type").and_then(|v| v.as_str()),
             Some("string"),
@@ -702,9 +731,9 @@ mod tests {
 
     #[test]
     fn depth_truncation_preserves_shallow_branches() {
-        // One branch 7 deep, one branch 2 deep
+        // One branch 12 deep (exceeds limit), one branch 2 deep (under limit)
         let mut deep = json!({"type": "string"});
-        for i in (0..6).rev() {
+        for i in (0..11).rev() {
             deep = json!({"type": "object", "properties": {format!("d{i}"): deep}});
         }
         let schema = json!({
@@ -718,7 +747,8 @@ mod tests {
 
         // Shallow branch should be untouched
         assert_eq!(
-            r.schema.pointer("/properties/shallow/type")
+            r.schema
+                .pointer("/properties/shallow/type")
                 .and_then(|v| v.as_str()),
             Some("string"),
             "shallow branch should remain a string"
@@ -738,10 +768,10 @@ mod tests {
 
     #[test]
     fn depth_truncation_emits_per_path_errors() {
-        // Build two parallel deep branches
+        // Build two parallel deep branches (12 levels each, exceeds limit of 10)
         let mut deep_a = json!({"type": "string"});
         let mut deep_b = json!({"type": "integer"});
-        for i in (0..6).rev() {
+        for i in (0..11).rev() {
             deep_a = json!({"type": "object", "properties": {format!("a{i}"): deep_a}});
             deep_b = json!({"type": "object", "properties": {format!("b{i}"): deep_b}});
         }
