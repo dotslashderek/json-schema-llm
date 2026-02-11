@@ -256,11 +256,10 @@ impl CompatVisitor<'_> {
         }
 
         // ── Data-shape: single-schema ──────────────────────────────
-        // items, additionalProperties, unevaluatedProperties, unevaluatedItems, contains
+        // additionalProperties, unevaluatedProperties, unevaluatedItems, contains
         // Note: only recurse if an object. Boolean values (e.g. `additionalProperties: false`)
         // are intentional constraints, not unconstrained sub-schemas.
         for keyword in &[
-            "items",
             "additionalProperties",
             "unevaluatedProperties",
             "unevaluatedItems",
@@ -272,6 +271,43 @@ impl CompatVisitor<'_> {
                 if let Some(child) = schema.get_mut(*keyword) {
                     self.visit(child, &child_path, rd, sd_data);
                 }
+            }
+        }
+
+        // ── Data-shape: items (single-schema OR tuple array) ─────────
+        // Handle both `items: {schema}` and `items: [{schema}, ...]`
+        // (cf. schema_utils::recurse_into_children for the canonical list)
+        {
+            let items_kind = schema.get("items").map(|v| {
+                if v.is_object() {
+                    1u8 // single schema
+                } else if v.is_array() {
+                    2 // tuple array
+                } else {
+                    0
+                }
+            });
+            match items_kind {
+                Some(1) => {
+                    let child_path = build_path(path, &["items"]);
+                    if let Some(child) = schema.get_mut("items") {
+                        self.visit(child, &child_path, rd, sd_data);
+                    }
+                }
+                Some(2) => {
+                    let count = schema
+                        .get("items")
+                        .and_then(|v| v.as_array())
+                        .map(|a| a.len())
+                        .unwrap_or(0);
+                    for i in 0..count {
+                        let child_path = build_path(path, &["items", &i.to_string()]);
+                        if let Some(child) = schema.get_mut("items").and_then(|p| p.get_mut(i)) {
+                            self.visit(child, &child_path, rd, sd_data);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -760,6 +796,36 @@ mod tests {
             visitor.max_depth_observed, 2,
             "properties → items should yield semantic depth 2, got: {}",
             visitor.max_depth_observed
+        );
+    }
+
+    // ── Tuple items traversal (Gemini review finding) ────────
+    #[test]
+    fn visitor_recurses_tuple_items() {
+        // Array-form items (tuple validation) should be traversed for mixed enum detection
+        let mut schema = json!({
+            "type": "array",
+            "items": [
+                { "type": "string" },
+                { "enum": ["a", 1] }
+            ]
+        });
+        let mut errors = Vec::new();
+        let mut transforms = Vec::new();
+        let mut visitor = CompatVisitor {
+            errors: &mut errors,
+            transforms: &mut transforms,
+            target: Target::OpenaiStrict,
+            max_depth_observed: 0,
+        };
+        visitor.visit(&mut schema, "#", 0, 0);
+        let enum_errs: Vec<_> = errors
+            .iter()
+            .filter(|e| matches!(e, ProviderCompatError::MixedEnumTypes { .. }))
+            .collect();
+        assert!(
+            !enum_errs.is_empty(),
+            "mixed enum inside tuple items should be detected"
         );
     }
 }
