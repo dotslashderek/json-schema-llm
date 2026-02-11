@@ -89,7 +89,7 @@ impl fmt::Display for ProviderCompatError {
                 hint,
             } => write!(
                 f,
-                "Schema depth {} exceeds limit of {}. {}",
+                "Schema depth {} reaches or exceeds limit of {}. {}",
                 actual_depth, max_depth, hint
             ),
             ProviderCompatError::MixedEnumTypes {

@@ -1356,7 +1356,7 @@ fn coerce_walk(data: &mut Value, schema: &Value, path: &str, warnings: &mut Vec<
                 } else {
                     path.to_string()
                 },
-                schema_path: String::new(),
+                schema_path: path.to_string(),
                 kind: WarningKind::ConstraintViolation {
                     constraint: "type".to_string(),
                 },
@@ -1416,7 +1416,10 @@ fn coerce_walk(data: &mut Value, schema: &Value, path: &str, warnings: &mut Vec<
                     _ => continue,
                 };
                 let data_type = json_type_name(data);
-                if variant_types.contains(&data_type) {
+                // "integer" data satisfies "number" schema (JSON spec compatibility)
+                let matches = variant_types.contains(&data_type)
+                    || (data_type == "integer" && variant_types.contains(&"number"));
+                if matches {
                     coerce_walk(data, variant, path, warnings);
                     break;
                 }
@@ -1470,10 +1473,16 @@ fn try_coerce(value: &mut Value, expected_types: &[&str]) -> Option<String> {
             "number" => {
                 if let Some(s) = value.as_str() {
                     if let Ok(n) = s.parse::<f64>() {
-                        if let Some(num) = serde_json::Number::from_f64(n) {
-                            let msg = format!("coerced string \"{}\" to number {}", s, n);
-                            *value = Value::Number(num);
-                            return Some(msg);
+                        // Roundtrip check: ensure formatting preserves the value
+                        let formatted = n.to_string();
+                        if let Ok(roundtripped) = formatted.parse::<f64>() {
+                            if (roundtripped - n).abs() < f64::EPSILON {
+                                if let Some(num) = serde_json::Number::from_f64(n) {
+                                    let msg = format!("coerced string \"{}\" to number {}", s, n);
+                                    *value = Value::Number(num);
+                                    return Some(msg);
+                                }
+                            }
                         }
                     }
                 }
