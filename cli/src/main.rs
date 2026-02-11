@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use jsonschema_llm_core::config::PolymorphismStrategy;
 use jsonschema_llm_core::{convert, rehydrate, Codec, ConvertOptions, Mode, Target};
+use serde::Deserialize;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
 use std::path::PathBuf;
@@ -207,10 +208,14 @@ fn main() -> Result<()> {
             format,
         } => {
             let data: serde_json::Value = {
-                let file = File::open(&input)
-                    .with_context(|| format!("Failed to open input file: {}", input.display()))?;
-                let reader = BufReader::new(file);
-                serde_json::from_reader(reader).with_context(|| {
+                let raw = std::fs::read_to_string(&input)
+                    .with_context(|| format!("Failed to read input file: {}", input.display()))?;
+
+                // LLM output commonly has trailing characters (extra braces, whitespace).
+                // Use serde_json's streaming deserializer to parse only the first valid
+                // JSON value and ignore trailing garbage.
+                let mut de = serde_json::Deserializer::from_str(&raw);
+                serde_json::Value::deserialize(&mut de).with_context(|| {
                     format!("Failed to parse input data from: {}", input.display())
                 })?
             };

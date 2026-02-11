@@ -138,11 +138,71 @@ fn sort_enum_default_first(obj: &mut Map<String, Value>) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 3: Constraint pruning
+// Step 3: Constraint pruning (with description hint injection)
 // ---------------------------------------------------------------------------
 
+/// Convert a pruned constraint into a human-readable hint for the LLM.
+///
+/// Returns `None` for constraints that aren't meaningful as generation hints
+/// (e.g., `default`, `not`, `if/then/else`, `dependencies`).
+fn constraint_to_hint(keyword: &str, value: &Value) -> Option<String> {
+    match keyword {
+        "minimum" => Some(format!("minimum value: {}", value)),
+        "maximum" => Some(format!("maximum value: {}", value)),
+        "exclusiveMinimum" => Some(format!("value must be > {}", value)),
+        "exclusiveMaximum" => Some(format!("value must be < {}", value)),
+        "minLength" => value
+            .as_u64()
+            .map(|n| format!("minimum length: {n} character(s)")),
+        "maxLength" => value
+            .as_u64()
+            .map(|n| format!("maximum length: {n} character(s)")),
+        "minItems" => value.as_u64().map(|n| format!("minimum {n} item(s)")),
+        "maxItems" => value.as_u64().map(|n| format!("maximum {n} item(s)")),
+        "uniqueItems" => {
+            if value.as_bool() == Some(true) {
+                Some("items must be unique".to_string())
+            } else {
+                None
+            }
+        }
+        "multipleOf" => Some(format!("must be a multiple of {}", value)),
+        "format" => value.as_str().map(|f| format!("format: {f}")),
+        "pattern" => value.as_str().map(|p| format!("must match pattern: {p}")),
+        // Advisory/structural constraints — no useful hint for generation
+        "default" | "not" | "if" | "then" | "else" | "dependencies" | "dependentRequired"
+        | "dependentSchemas" | "contains" | "minContains" | "maxContains" | "minProperties"
+        | "maxProperties" | "propertyNames" => None,
+        _ => None,
+    }
+}
+
+/// Append hint text to an object's `description` field.
+///
+/// If no `description` exists, creates one. If one exists, appends with a
+/// period separator. Keeps descriptions concise — just the constraint facts.
+fn append_to_description(obj: &mut Map<String, Value>, hint_text: &str) {
+    match obj.get_mut("description") {
+        Some(Value::String(existing)) => {
+            // Append to existing description
+            if !existing.ends_with('.') && !existing.ends_with(' ') {
+                existing.push('.');
+            }
+            existing.push(' ');
+            existing.push_str(hint_text);
+        }
+        _ => {
+            obj.insert(
+                "description".to_string(),
+                Value::String(hint_text.to_string()),
+            );
+        }
+    }
+}
+
 /// Remove unsupported constraints from a single node, emitting `DroppedConstraint`
-/// codec entries for each one.
+/// codec entries for each one and injecting description hints so the LLM knows
+/// about the original bounds.
 fn prune_node_constraints(
     obj: &mut Map<String, Value>,
     path: &str,
@@ -150,14 +210,26 @@ fn prune_node_constraints(
     dropped: &mut Vec<DroppedConstraint>,
 ) {
     let (universal, extra) = unsupported_constraints(target);
+    let mut hints: Vec<String> = Vec::new();
+
     for keyword in universal.iter().chain(extra.iter()) {
         if let Some(value) = obj.remove(*keyword) {
+            // Build human-readable hint before moving value into codec
+            if let Some(hint) = constraint_to_hint(keyword, &value) {
+                hints.push(hint);
+            }
             dropped.push(DroppedConstraint {
                 path: path.to_string(),
                 constraint: keyword.to_string(),
                 value,
             });
         }
+    }
+
+    // Inject combined hint into description field
+    if !hints.is_empty() {
+        let hint_text = format!("Constraints: {}.", hints.join("; "));
+        append_to_description(obj, &hint_text);
     }
 }
 
