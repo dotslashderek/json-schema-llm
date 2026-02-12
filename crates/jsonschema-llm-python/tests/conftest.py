@@ -51,6 +51,10 @@ def _all_schemas() -> list[tuple[str, dict]]:
 # ---------------------------------------------------------------------------
 
 ALL_FIXTURES = _all_schemas()
+assert ALL_FIXTURES, (
+    f"No fixture schemas found — expected schemas in {SCHEMAS_DIR}. "
+    "Check that the repo root is correctly resolved."
+)
 FIXTURE_IDS = [name for name, _ in ALL_FIXTURES]
 
 

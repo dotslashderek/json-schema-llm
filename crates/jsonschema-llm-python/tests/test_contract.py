@@ -35,10 +35,10 @@ class TestConvertEnvelope:
     def test_envelope_shape(self, name, schema, target):
         try:
             result = convert(schema, {"target": target})
-        except JsonSchemaLlmError:
+        except JsonSchemaLlmError as e:
             # Some schemas (e.g. depth-50) exceed recursion limits —
-            # a structured error is acceptable behavior.
-            return
+            # a structured error is acceptable behavior, but mark as xfail for visibility.
+            pytest.xfail(f"{name} × {target}: convert raised {e.code}")
 
         # api_version
         assert result["api_version"] == "1.0", f"{name} × {target}: missing api_version"
@@ -72,9 +72,9 @@ class TestConvertSchema:
     def test_output_has_type(self, name, schema):
         try:
             result = convert(schema, {"target": "openai-strict"})
-        except JsonSchemaLlmError:
+        except JsonSchemaLlmError as e:
             # Some schemas exceed depth limits — structured error is valid.
-            return
+            pytest.xfail(f"{name}: convert raised {e.code}")
         output = result["schema"]
         if isinstance(output, dict):
             assert "type" in output, f"{name}: output schema missing 'type' key"
@@ -135,10 +135,10 @@ class TestRoundTrip:
 
         try:
             result = rehydrate({}, cr["codec"], schema)
-        except JsonSchemaLlmError:
+        except JsonSchemaLlmError as e:
             # Some schemas (edge cases, root arrays, etc.) produce codecs
             # that expect specific data shapes — structured error is valid.
-            return
+            pytest.xfail(f"{name} × {target}: rehydrate raised {e.code}")
 
         assert result["api_version"] == "1.0", f"{name} × {target}: rehydrate missing api_version"
         assert "data" in result, f"{name} × {target}: rehydrate missing data"
@@ -286,8 +286,9 @@ class TestErrorPaths:
         }
         with pytest.raises(JsonSchemaLlmError) as exc_info:
             rehydrate({}, bad_codec, {})
-        assert hasattr(exc_info.value, "code")
+        assert exc_info.value.code == "codec_version_mismatch"
         assert isinstance(exc_info.value.message, str)
+        assert exc_info.value.message
 
     def test_error_is_exception_subclass(self):
         """JsonSchemaLlmError can be caught as a generic Exception."""
