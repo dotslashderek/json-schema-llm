@@ -594,3 +594,137 @@ fn test_e2e_rehydrate_failed_coercion_no_constraint() {
         "Should NOT have minimum violation — 'abc' is not numeric so constraint doesn't apply"
     );
 }
+
+// ── #120: Recursive inflate + opaque string parsing ────────────────────
+
+// 19. Full pipeline roundtrip for recursive_graph.json — data fields
+//     inside recursively-inflated nodes should be parsed from JSON strings
+#[test]
+fn test_e2e_recursive_graph_nested_opaque() {
+    use jsonschema_llm_core::codec::Transform;
+
+    let schema = load_fixture("stress/recursive_graph");
+
+    let options = ConvertOptions {
+        recursion_limit: 2,
+        ..openai_options()
+    };
+    let result = convert(&schema, &options).expect("convert should succeed");
+
+    // Verify expected transforms
+    let jsp_count = result
+        .codec
+        .transforms
+        .iter()
+        .filter(|t| matches!(t, Transform::JsonStringParse { .. }))
+        .count();
+    let ri_count = result
+        .codec
+        .transforms
+        .iter()
+        .filter(|t| matches!(t, Transform::RecursiveInflate { .. }))
+        .count();
+    assert!(jsp_count > 0, "Should have JsonStringParse transforms");
+    assert!(ri_count > 0, "Should have RecursiveInflate transforms");
+
+    // Build LLM output matching the 3-level recursive schema:
+    //   Root object → edges[].target (L1 object) → edges[].target (L2 object)
+    //     → edges[].target (L3: JSON string via RecursiveInflate)
+    //   `data` at every level is a JSON string (opaque via p4)
+    let leaf_data = json!({"role": "leaf"});
+
+    // Level 3: the deepest node, to be serialized as JSON string (RecursiveInflate)
+    let level3_node = json!({
+        "id": "leaf",
+        "data": serde_json::to_string(&leaf_data).unwrap(),
+        "edges": []
+    });
+
+    // Level 2: inline object, edges contain the JSON-string target
+    let level2_data = json!({"role": "branch"});
+    let level2_node = json!({
+        "id": "branch",
+        "data": serde_json::to_string(&level2_data).unwrap(),
+        "edges": [
+            {
+                "target": serde_json::to_string(&level3_node).unwrap(),
+                "weight": null,
+                "label": null
+            }
+        ]
+    });
+
+    // Level 1: inline object
+    let level1_data = json!({"role": "trunk"});
+    let level1_node = json!({
+        "id": "trunk",
+        "data": serde_json::to_string(&level1_data).unwrap(),
+        "edges": [{
+            "target": level2_node,
+            "weight": null,
+            "label": null
+        }]
+    });
+
+    // Root (Level 0)
+    let root_data = json!({"role": "root"});
+    let llm_output = json!({
+        "id": "root",
+        "data": serde_json::to_string(&root_data).unwrap(),
+        "edges": [{
+            "target": level1_node,
+            "weight": 1.0,
+            "label": "main"
+        }]
+    });
+
+    let rehydrated =
+        rehydrate(&llm_output, &result.codec, &schema).expect("rehydrate should succeed");
+
+    // Root `data` should be parsed (covered by existing JSP at #/properties/data)
+    assert!(
+        rehydrated.data["data"].is_object(),
+        "Root data should be parsed, got: {:?}",
+        rehydrated.data["data"]
+    );
+
+    // Level 1 `data` should be parsed (inline path in schema)
+    let l1 = &rehydrated.data["edges"][0]["target"];
+    assert!(
+        l1["data"].is_object(),
+        "Level 1 data should be parsed, got: {:?}",
+        l1["data"]
+    );
+
+    // Level 2 `data` should be parsed (inline path in schema)
+    let l2 = &l1["edges"][0]["target"];
+    assert!(
+        l2["data"].is_object(),
+        "Level 2 data should be parsed, got: {:?}",
+        l2["data"]
+    );
+
+    // Level 3 target should be inflated from JSON string (RecursiveInflate)
+    let l3 = &l2["edges"][0]["target"];
+    assert!(
+        l3.is_object(),
+        "Level 3 target should be inflated, got: {:?}",
+        l3
+    );
+    assert_eq!(l3["id"], json!("leaf"));
+
+    // ── CORE #120 ASSERTION ──
+    // Level 3 `data` (inside the RecursiveInflate node) should ALSO be parsed.
+    // Before the fix, this stays as a raw JSON string because the
+    // $defs-sourced JSP doesn't resolve to this data location.
+    assert!(
+        l3["data"].is_object(),
+        "Level 3 data (inside inflated target) should be parsed from JSON string, got: {:?}",
+        l3["data"]
+    );
+    assert_eq!(
+        l3["data"]["role"],
+        json!("leaf"),
+        "Level 3 data contents should be preserved"
+    );
+}

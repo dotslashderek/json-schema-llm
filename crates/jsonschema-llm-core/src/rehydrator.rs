@@ -4,7 +4,7 @@
 //! (`properties`, `items`) and schema-structural segments (`anyOf`, `oneOf`, etc.)
 //! which are skipped during data navigation.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -58,10 +58,186 @@ pub fn apply_transforms(data: &Value, codec: &Codec) -> Result<RehydrateResult, 
         apply_transform(&mut result, &seg_refs, transform, &regex_cache)?;
     }
 
+    // ── #120: Replay $defs-sourced transforms at RecursiveInflate sites ──
+    //
+    // The p4 opaque pass records JsonStringParse with $defs-relative paths
+    // (e.g. `#/$defs/graph_node/properties/data`). The data walker's SKIP_PAIR
+    // logic skips `$defs` + def_name, so these accidentally resolve to the
+    // root-level `properties/data` instead of the nested data inside recursive
+    // nodes. After RecursiveInflate has expanded JSON strings into objects,
+    // replay those JSP transforms at each RI location.
+    replay_defs_transforms_at_inflate_sites(&mut result, codec, &regex_cache)?;
+
     Ok(RehydrateResult {
         data: result,
         warnings: Vec::new(),
     })
+}
+
+/// Replay `$defs`-sourced `JsonStringParse` transforms at each `RecursiveInflate` location.
+///
+/// When the converter records a `JsonStringParse` at `#/$defs/TypeName/properties/field`,
+/// the data walker's `SKIP_PAIR` logic for `$defs` causes it to skip `$defs` + `TypeName`
+/// and apply the transform at the root level. But the same `field` also exists inside
+/// each inline-expanded copy of the recursive type. This function extracts all
+/// intermediate recursion boundaries from the RI path and replays the $defs JSP
+/// suffix at each one (including the RI terminal itself).
+fn replay_defs_transforms_at_inflate_sites(
+    data: &mut Value,
+    codec: &Codec,
+    regex_cache: &HashMap<String, Result<Regex, String>>,
+) -> Result<(), ConvertError> {
+    // Collect RecursiveInflate paths and their original $ref values
+    let inflate_sites: Vec<(&str, &str)> = codec
+        .transforms
+        .iter()
+        .filter_map(|t| match t {
+            Transform::RecursiveInflate {
+                path, original_ref, ..
+            } => Some((path.as_str(), original_ref.as_str())),
+            _ => None,
+        })
+        .collect();
+
+    if inflate_sites.is_empty() {
+        return Ok(());
+    }
+
+    // Collect $defs-sourced JsonStringParse transforms
+    // These have paths like `#/$defs/TypeName/properties/field`
+    let defs_jsps: Vec<(&str, String, Vec<String>)> = codec
+        .transforms
+        .iter()
+        .filter_map(|t| match t {
+            Transform::JsonStringParse { path } => {
+                let segments = split_path(path);
+                // Check if path starts with $defs (after # root)
+                if segments.len() >= 2 && segments[0] == "$defs" {
+                    let def_name = segments[1].clone();
+                    // The suffix after $defs/TypeName is the data-relative path
+                    let suffix: Vec<String> = segments[2..].to_vec();
+                    Some((path.as_str(), def_name, suffix))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect();
+
+    // Pre-index $defs JSPs by their def name for O(1) lookup per inflate site
+    let mut defs_jsps_by_def: HashMap<&str, Vec<(&str, &[String])>> = HashMap::new();
+    for (jsp_path, def_name, suffix) in &defs_jsps {
+        if !suffix.is_empty() {
+            defs_jsps_by_def
+                .entry(def_name.as_str())
+                .or_default()
+                .push((jsp_path, suffix.as_slice()));
+        }
+    }
+
+    if defs_jsps_by_def.is_empty() {
+        return Ok(());
+    }
+
+    // Reusable buffer for building concrete paths
+    let mut concrete_segments: Vec<String> = Vec::new();
+    // Dedup: avoid replaying the same synthetic path across overlapping inflate sites
+    let mut seen_paths: HashSet<String> = HashSet::new();
+
+    for (ri_path, original_ref) in &inflate_sites {
+        let ri_segments = split_path(ri_path);
+
+        // Extract the def name from original_ref (e.g. "#/$defs/graph_node" → "graph_node")
+        let ref_segments = split_path(original_ref);
+        let ref_def_name = if ref_segments.len() >= 2 && ref_segments[0] == "$defs" {
+            ref_segments[1].as_str()
+        } else {
+            continue;
+        };
+
+        // Look up JSPs for this def type — skip if none
+        let matching_jsps = match defs_jsps_by_def.get(ref_def_name) {
+            Some(jsps) => jsps,
+            None => continue,
+        };
+
+        // Find all intermediate "recursion boundaries" in the RI path using
+        // shortest-period detection. The RI path is the fully-expanded inline path
+        // to the deepest recursive site. We detect the repeating structural unit
+        // and emit one prefix per recursion level.
+        let replay_prefixes = extract_recursion_prefixes(&ri_segments);
+
+        for (jsp_path, suffix) in matching_jsps {
+            for prefix in &replay_prefixes {
+                concrete_segments.clear();
+                concrete_segments.extend(prefix.iter().cloned());
+                concrete_segments.extend(suffix.iter().cloned());
+
+                let synthetic_path = format!("#/{}", concrete_segments.join("/"));
+
+                // Skip if we've already replayed this exact path
+                if !seen_paths.insert(synthetic_path.clone()) {
+                    continue;
+                }
+
+                let seg_refs: Vec<&str> = concrete_segments.iter().map(|s| s.as_str()).collect();
+                let synthetic_transform = Transform::JsonStringParse {
+                    path: synthetic_path.clone(),
+                };
+
+                tracing::debug!(
+                    original_jsp = %jsp_path,
+                    concrete_path = %synthetic_path,
+                    "replaying $defs JSP at recursive expansion site"
+                );
+                apply_transform(data, &seg_refs, &synthetic_transform, regex_cache)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Extract all intermediate recursion boundary prefixes from a RecursiveInflate path.
+///
+/// Given a path like `a/b/c/a/b/c/a/b/c` (where `a/b/c` is the repeating recursion unit),
+/// returns `[a/b/c, a/b/c/a/b/c, a/b/c/a/b/c/a/b/c]` — one prefix for each recursion level.
+///
+/// Uses shortest-period detection to find the repeating unit, avoiding false positives
+/// when the terminal segment name appears non-recursively earlier in the path.
+fn extract_recursion_prefixes(ri_segments: &[String]) -> Vec<Vec<String>> {
+    let n = ri_segments.len();
+    if n == 0 {
+        return vec![];
+    }
+
+    // Detect the shortest period that composes the entire path. For example, for
+    // ["a","b","c","a","b","c","a","b","c"] the period is ["a","b","c"].
+    let mut period_len = n;
+    'outer: for candidate in 1..=n {
+        #[allow(unknown_lints)]
+        #[allow(clippy::manual_is_multiple_of)]
+        if n % candidate != 0 {
+            continue;
+        }
+        for i in 0..n {
+            if ri_segments[i] != ri_segments[i % candidate] {
+                continue 'outer;
+            }
+        }
+        period_len = candidate;
+        break;
+    }
+
+    let levels = n / period_len;
+    let mut prefixes = Vec::with_capacity(levels);
+    for level in 1..=levels {
+        let end = level * period_len;
+        prefixes.push(ri_segments[..end].to_vec());
+    }
+
+    prefixes
 }
 
 /// Pre-scan transform and constraint paths for patternProperties segments
@@ -1526,6 +1702,7 @@ fn json_type_name(value: &Value) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::codec::CODEC_SCHEMA_URI;
     use serde_json::json;
 
     /// Helper: run the full rehydration pipeline (transforms + constraints)
@@ -2387,5 +2564,87 @@ mod tests {
         // items (fallback) → string: 99 → "99"
         assert_eq!(data[3], json!("99"));
         assert_eq!(warnings.len(), 3); // 3 coercions
+    }
+
+    // ── #120: JsonStringParse inside RecursiveInflate ──────────────
+
+    #[test]
+    fn test_recursive_inflate_then_json_string_parse() {
+        // Simulates: a graph node with `target` (RecursiveInflate) containing
+        // an opaque `data` property (JsonStringParse).
+        //
+        // The codec records:
+        //   1. JsonStringParse at #/properties/data (root data, applied by main LIFO pass)
+        //   2. JsonStringParse at #/$defs/graph_node/properties/data ($defs-relative,
+        //      exercising the replay pass — the main LIFO pass only resolves this to root
+        //      via SKIP_PAIR; replay_defs_transforms_at_inflate_sites handles nested copies)
+        //   3. RecursiveInflate at #/properties/edges/items/properties/target
+        //
+        // The LLM output has `target` as a JSON string (recursive inflate)
+        // and within that, `data` is also a JSON string (opaque object).
+        // Both should be parsed into objects after apply_transforms.
+
+        let inner_data = json!({"key": "value"});
+        let inner_node = json!({
+            "id": "child",
+            "data": serde_json::to_string(&inner_data).unwrap(),
+            "edges": []
+        });
+
+        let data = json!({
+            "id": "root",
+            "data": serde_json::to_string(&inner_data).unwrap(),
+            "edges": [
+                {
+                    "target": serde_json::to_string(&inner_node).unwrap(),
+                    "weight": 1.0
+                }
+            ]
+        });
+
+        let codec = Codec {
+            schema: CODEC_SCHEMA_URI.to_string(),
+            transforms: vec![
+                // During conversion: p4 records JsonStringParse for root data
+                Transform::JsonStringParse {
+                    path: "#/properties/data".to_string(),
+                },
+                // p4 records a $defs-relative path for data under the recursive type —
+                // this is the real path p4 generates, NOT a data-relative path.
+                // The replay pass must map this onto the RI site.
+                Transform::JsonStringParse {
+                    path: "#/$defs/graph_node/properties/data".to_string(),
+                },
+                // p5 records RecursiveInflate for the recursive ref
+                Transform::RecursiveInflate {
+                    path: "#/properties/edges/items/properties/target".to_string(),
+                    original_ref: "#/$defs/graph_node".to_string(),
+                },
+            ],
+            dropped_constraints: vec![],
+        };
+
+        let result = apply_transforms(&data, &codec).expect("apply_transforms should succeed");
+
+        // Root-level data should be parsed
+        assert_eq!(
+            result.data["data"],
+            json!({"key": "value"}),
+            "root data should be parsed from JSON string"
+        );
+
+        // Target should be inflated from JSON string to object
+        assert!(
+            result.data["edges"][0]["target"].is_object(),
+            "target should be inflated to an object, got: {:?}",
+            result.data["edges"][0]["target"]
+        );
+
+        // The nested data inside target should also be parsed from JSON string
+        assert_eq!(
+            result.data["edges"][0]["target"]["data"],
+            json!({"key": "value"}),
+            "nested data inside inflated target should be parsed from JSON string"
+        );
     }
 }
