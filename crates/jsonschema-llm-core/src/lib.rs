@@ -144,6 +144,9 @@ pub fn convert(schema: &Value, options: &ConvertOptions) -> Result<ConvertResult
 /// A [`RehydrateResult`] containing the rehydrated data and any advisory warnings
 /// about constraint violations or type coercions encountered during rehydration.
 ///
+/// Warnings are *advisory only*: they never cause `rehydrate` to return `Err`
+/// and are intended for logging, inspection, or telemetry rather than control flow.
+///
 /// # Examples
 ///
 /// ```rust,no_run
