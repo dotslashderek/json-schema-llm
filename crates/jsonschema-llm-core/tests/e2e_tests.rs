@@ -328,3 +328,67 @@ fn test_e2e_rehydrate_null_non_nullable() {
         "Rehydrator should not crash on null for required fields"
     );
 }
+
+// 12. Type coercion: string→integer is coerced and warning emitted
+#[test]
+fn test_e2e_rehydrate_type_coercion() {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "integer" }
+        },
+        "required": ["name", "age"]
+    });
+
+    let result = convert(&schema, &openai_options()).unwrap();
+
+    // LLM returns age as string "42" instead of integer 42
+    let llm_output = json!({
+        "name": "Ada",
+        "age": "42"
+    });
+
+    let rehydrated = rehydrate(&llm_output, &result.codec, &schema).unwrap();
+
+    // (1) Value should be coerced to integer 42
+    assert_eq!(
+        rehydrated.data["age"],
+        json!(42),
+        "String '42' should be coerced to integer 42"
+    );
+
+    // (2) A coercion warning should be emitted
+    assert!(
+        !rehydrated.warnings.is_empty(),
+        "Coercion should produce at least one warning"
+    );
+
+    // (3) Name should remain unchanged
+    assert_eq!(rehydrated.data["name"], json!("Ada"));
+}
+
+// 13. Type coercion: boolean string "true" → true
+#[test]
+fn test_e2e_rehydrate_type_coercion_boolean() {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "active": { "type": "boolean" }
+        },
+        "required": ["active"]
+    });
+
+    let result = convert(&schema, &openai_options()).unwrap();
+
+    // LLM returns boolean as string
+    let llm_output = json!({ "active": "true" });
+
+    let rehydrated = rehydrate(&llm_output, &result.codec, &schema).unwrap();
+
+    assert_eq!(
+        rehydrated.data["active"],
+        json!(true),
+        "String 'true' should be coerced to boolean true"
+    );
+}
