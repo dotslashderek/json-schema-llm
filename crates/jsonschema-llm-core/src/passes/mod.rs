@@ -1,7 +1,10 @@
 //! Conversion pass modules.
 //!
 //! Each pass is a self-contained transformation that operates on a JSON Schema.
-//! Passes are executed in order (0-7) and each assumes the output of previous passes.
+//! Passes are executed in order (0–9) and each assumes the output of previous passes.
+//! Shared cross-pass utilities live in `pass_utils`.
+
+pub mod pass_utils;
 
 pub mod p0_normalize;
 pub mod p1_composition;

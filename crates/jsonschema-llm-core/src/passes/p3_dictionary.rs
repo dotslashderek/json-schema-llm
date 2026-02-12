@@ -16,6 +16,8 @@ use crate::config::{ConvertOptions, Target};
 use crate::error::ConvertError;
 use crate::schema_utils::{build_path, recurse_into_children};
 
+use super::pass_utils::is_typed_object;
+
 /// Field name for the map key in the transpiled array item.
 const KEY_FIELD: &str = "key";
 /// Field name for the map value in the transpiled array item.
@@ -121,11 +123,6 @@ fn is_pure_map(obj: &Map<String, Value>) -> bool {
 /// A "mixed map" has BOTH `properties` (non-empty) AND `additionalProperties: Schema`.
 fn is_mixed_map(obj: &Map<String, Value>) -> bool {
     is_typed_object(obj) && has_schema_additional_properties(obj) && has_non_empty_properties(obj)
-}
-
-/// Check whether a JSON object has `"type": "object"`.
-fn is_typed_object(obj: &Map<String, Value>) -> bool {
-    obj.get("type").and_then(Value::as_str) == Some("object")
 }
 
 /// Check if `additionalProperties` is a schema object (not a bool, not absent).

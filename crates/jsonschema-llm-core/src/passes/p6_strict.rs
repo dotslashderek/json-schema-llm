@@ -7,14 +7,14 @@
 //!
 //! Emits `NullableOptional` codec entries for each optional→nullable transformation.
 
-use std::collections::HashSet;
-
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 
 use crate::codec::Transform;
 use crate::config::ConvertOptions;
 use crate::error::ConvertError;
-use crate::schema_utils::{build_path, recurse_into_children};
+use crate::schema_utils::recurse_into_children;
+
+use super::pass_utils::{enforce_object_strict, is_typed_object};
 
 /// Result of running the strict enforcement pass.
 #[derive(Debug)]
@@ -87,158 +87,8 @@ fn walk(
 }
 
 // ---------------------------------------------------------------------------
-// Object-level strict enforcement (the 3 transformations)
+// Helpers — delegated to `pass_utils`
 // ---------------------------------------------------------------------------
-
-/// Apply the three strict-mode transformations to a single `type: object` node.
-fn enforce_object_strict(
-    obj: &mut Map<String, Value>,
-    path: &str,
-    transforms: &mut Vec<Transform>,
-) {
-    let required_keys = extract_required_set(obj);
-    let all_keys = extract_property_keys(obj);
-    let optional_keys: Vec<String> = all_keys
-        .iter()
-        .filter(|k| !required_keys.contains(k.as_str()))
-        .cloned()
-        .collect();
-
-    // 1. Wrap each optional property with anyOf: [T, {type: null}]
-    wrap_optional_properties(obj, &optional_keys, path, transforms);
-
-    // 2. Set `required` to all property keys in `properties` order
-    set_all_required(obj, &all_keys);
-
-    // 3. Seal the object
-    obj.insert("additionalProperties".to_string(), Value::Bool(false));
-}
-
-// ---------------------------------------------------------------------------
-// Small composable helpers
-// ---------------------------------------------------------------------------
-
-/// Check whether a JSON object has `"type": "object"`.
-fn is_typed_object(obj: &Map<String, Value>) -> bool {
-    obj.get("type").and_then(Value::as_str) == Some("object")
-}
-
-/// Extract the current `required` array from a schema object as a set of strings.
-fn extract_required_set(obj: &Map<String, Value>) -> HashSet<String> {
-    obj.get("required")
-        .and_then(Value::as_array)
-        .map(|arr| {
-            arr.iter()
-                .filter_map(Value::as_str)
-                .map(String::from)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-/// Extract all property keys from a schema object's `properties` map.
-fn extract_property_keys(obj: &Map<String, Value>) -> Vec<String> {
-    obj.get("properties")
-        .and_then(Value::as_object)
-        .map(|props| props.keys().cloned().collect())
-        .unwrap_or_default()
-}
-
-/// Wrap each optional property in `anyOf: [original_schema, {type: null}]`.
-/// If the property schema is already nullable (has `type: ["...", "null"]`
-/// or `anyOf` containing `{type: "null"}`), skips the wrap but still emits
-/// a `NullableOptional` transform so the rehydrator knows to strip `null`.
-fn wrap_optional_properties(
-    obj: &mut Map<String, Value>,
-    optional_keys: &[String],
-    path: &str,
-    transforms: &mut Vec<Transform>,
-) {
-    let props = match obj.get_mut("properties").and_then(Value::as_object_mut) {
-        Some(p) => p,
-        None => return,
-    };
-
-    for key in optional_keys {
-        if let Some(prop_schema) = props.get(key) {
-            if !is_already_nullable(prop_schema) {
-                // Only clone when we actually need to wrap
-                let wrapped = wrap_nullable(prop_schema.clone());
-                props.insert(key.clone(), wrapped);
-            }
-            // Always emit transform — rehydrator needs to know null → undefined
-            transforms.push(Transform::NullableOptional {
-                path: build_path(path, &["properties", key]),
-                original_required: false,
-            });
-        }
-    }
-}
-
-/// Check if a schema already allows `null`.
-///
-/// Two forms are recognised:
-/// - `type: ["...", "null"]` (type array containing "null")
-/// - `anyOf: [... , V]` where V has `type: "null"` or `type: ["null"]`
-fn is_already_nullable(schema: &Value) -> bool {
-    if let Some(obj) = schema.as_object() {
-        // Check type array form: type: ["string", "null"]
-        if let Some(type_val) = obj.get("type") {
-            if type_contains_null(type_val) {
-                return true;
-            }
-        }
-        // Check anyOf form: anyOf: [..., {type: "null"}] or {type: ["null"]}
-        if let Some(any_of) = obj.get("anyOf").and_then(Value::as_array) {
-            if any_of
-                .iter()
-                .any(|v| v.get("type").map(type_contains_null).unwrap_or(false))
-            {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Check if a `type` value includes `"null"` — handles both string and array forms.
-fn type_contains_null(type_val: &Value) -> bool {
-    match type_val {
-        Value::String(s) => s == "null",
-        Value::Array(arr) => arr.iter().any(|t| t.as_str() == Some("null")),
-        _ => false,
-    }
-}
-
-/// Wrap a single schema in `anyOf: [schema, {type: null}]`.
-/// Hoists any top-level `description` and `title` into the non-null variant.
-fn wrap_nullable(mut schema: Value) -> Value {
-    // Extract metadata from the top level — it belongs on the non-null variant.
-    let description = schema.as_object_mut().and_then(|o| o.remove("description"));
-    let title = schema.as_object_mut().and_then(|o| o.remove("title"));
-
-    let mut non_null_variant = schema;
-
-    // Re-insert extracted metadata inside the non-null variant.
-    if let Some(obj) = non_null_variant.as_object_mut() {
-        if let Some(desc) = description {
-            obj.insert("description".to_string(), desc);
-        }
-        if let Some(t) = title {
-            obj.insert("title".to_string(), t);
-        }
-    }
-
-    json!({
-        "anyOf": [non_null_variant, {"type": "null"}]
-    })
-}
-
-/// Set `required` to all property keys.
-fn set_all_required(obj: &mut Map<String, Value>, all_keys: &[String]) {
-    let required: Vec<Value> = all_keys.iter().map(|k| Value::String(k.clone())).collect();
-    obj.insert("required".to_string(), Value::Array(required));
-}
 
 // ===========================================================================
 // Tests

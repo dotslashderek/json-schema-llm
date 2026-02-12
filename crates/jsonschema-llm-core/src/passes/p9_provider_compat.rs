@@ -21,6 +21,8 @@ use crate::error::ProviderCompatError;
 use crate::schema_utils::build_path;
 use serde_json::{json, Value};
 
+use super::pass_utils::{enforce_object_strict, extract_types};
+
 /// OpenAI Strict Mode maximum nesting depth.
 ///
 /// OpenAI enforces a 10-level nesting limit for structured output schemas.
@@ -89,23 +91,6 @@ pub fn check_provider_compat(schema: &Value, config: &ConvertOptions) -> Provide
 // Check 1: Root type enforcement (#94)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Extract root type(s) from a schema, handling both string and array forms.
-///
-/// Returns a `Vec<String>`:
-/// - `type: "object"` → `["object"]`
-/// - `type: ["object", "null"]` → `["object", "null"]`
-/// - absent or non-string/non-array → `[]`
-fn extract_root_types(schema: &Value) -> Vec<String> {
-    match schema.get("type") {
-        Some(Value::String(s)) => vec![s.clone()],
-        Some(Value::Array(arr)) => arr
-            .iter()
-            .filter_map(|v| v.as_str().map(String::from))
-            .collect(),
-        _ => vec![],
-    }
-}
-
 /// Wraps non-object roots or roots with combinators in
 /// `{ type: object, properties: { result: <original> }, ... }`.
 ///
@@ -118,7 +103,7 @@ fn check_root_type(
     errors: &mut Vec<ProviderCompatError>,
     transforms: &mut Vec<Transform>,
 ) -> Value {
-    let root_types = extract_root_types(schema);
+    let root_types = extract_types(schema);
     let is_object = root_types.len() == 1 && root_types[0] == "object";
 
     // Check for root-level combinators that OpenAI rejects
@@ -171,14 +156,39 @@ fn check_root_type(
     });
 
     // Build the wrapper schema
-    json!({
+    let mut wrapper = json!({
         "type": "object",
         "properties": {
             "result": schema,
         },
         "required": ["result"],
         "additionalProperties": false,
-    })
+    });
+
+    // #110: If the inner schema has `properties` but wasn't already strict-enforced
+    // (i.e., it lacks `additionalProperties: false`), apply strict mode now.
+    // This handles schemas that had properties but no `type: object` — p6 skipped
+    // them because it gates on is_typed_object.
+    //
+    // Transform path must be "#/properties/result" (the physical wrapped path)
+    // because the rehydrator applies transforms LIFO: NullableOptional runs
+    // BEFORE RootObjectWrapper unwraps.
+    if let Some(inner) = wrapper
+        .pointer_mut("/properties/result")
+        .and_then(|v| v.as_object_mut())
+    {
+        let has_properties = inner
+            .get("properties")
+            .and_then(|v| v.as_object())
+            .is_some_and(|p| !p.is_empty());
+        let already_strict = inner.get("additionalProperties") == Some(&Value::Bool(false));
+
+        if has_properties && !already_strict {
+            enforce_object_strict(inner, "#/properties/result", transforms);
+        }
+    }
+
+    wrapper
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

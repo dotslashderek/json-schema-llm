@@ -14,6 +14,8 @@ use crate::schema_utils::build_path;
 use serde_json::{Map, Value};
 use std::collections::HashSet;
 
+use super::pass_utils::extract_type_strings;
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -403,8 +405,8 @@ fn intersect_type(
     }
 
     // Handle array-form types: intersect the type sets.
-    let base_types = type_to_set(existing);
-    let overlay_types = type_to_set(&overlay_val);
+    let base_types: HashSet<String> = extract_type_strings(existing).into_iter().collect();
+    let overlay_types: HashSet<String> = extract_type_strings(&overlay_val).into_iter().collect();
 
     if !base_types.is_empty() && !overlay_types.is_empty() {
         // Normalize: expand "number" to include "integer" for subtype compatibility
@@ -572,22 +574,6 @@ fn type_to_string(val: &Value) -> Option<String> {
         Value::String(s) => Some(s.clone()),
         Value::Array(arr) if arr.len() == 1 => arr[0].as_str().map(String::from),
         _ => None,
-    }
-}
-
-/// Extract all type strings as a set for intersection logic.
-fn type_to_set(val: &Value) -> HashSet<String> {
-    match val {
-        Value::String(s) => {
-            let mut set = HashSet::new();
-            set.insert(s.clone());
-            set
-        }
-        Value::Array(arr) => arr
-            .iter()
-            .filter_map(|v| v.as_str().map(String::from))
-            .collect(),
-        _ => HashSet::new(),
     }
 }
 
