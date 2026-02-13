@@ -54,3 +54,8 @@ stress_results/
 # Environment
 .env
 .env.local
+
+# cargo-fuzz artifacts
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
