@@ -25,7 +25,7 @@ pub fn prune_constraints(
     config: &ConvertOptions,
 ) -> Result<PassResult, ConvertError> {
     let mut dropped = Vec::new();
-    let result = walk(&schema, "#", 0, config, &mut dropped)?;
+    let result = walk(schema, "#", 0, config, &mut dropped)?;
     Ok(PassResult::with_dropped(result, dropped))
 }
 
@@ -36,7 +36,7 @@ pub fn prune_constraints(
 /// Recursively descend through the schema tree, pruning constraints at each
 /// node and collecting dropped constraint records.
 fn walk(
-    node: &Value,
+    node: Value,
     path: &str,
     depth: usize,
     config: &ConvertOptions,
@@ -49,27 +49,27 @@ fn walk(
         });
     }
 
-    // Clone the node once, then mutate its object map in-place if present.
-    let mut result = node.clone();
-    let Some(obj) = result.as_object_mut() else {
-        return Ok(result);
+    // Use the owned node directly, mutating its object map in-place if present.
+    let mut result = match node {
+        Value::Object(obj) => obj,
+        other => return Ok(other),
     };
 
     // 1. const → enum normalization (before sorting or pruning)
-    normalize_const_to_enum(obj, path, config.target, dropped);
+    normalize_const_to_enum(&mut result, path, config.target, dropped);
 
     // 2. Enum default-first sorting (before default is dropped)
-    sort_enum_default_first(obj);
+    sort_enum_default_first(&mut result);
 
     // 3. Prune unsupported constraints
-    prune_node_constraints(obj, path, config.target, dropped);
+    prune_node_constraints(&mut result, path, config.target, dropped);
 
     // Recurse into all structural children
-    recurse_into_children(obj, path, depth, &mut |val, child_path, d| {
+    recurse_into_children(&mut result, path, depth, &mut |val, child_path, d| {
         walk(val, child_path, d, config, dropped)
     })?;
 
-    Ok(result)
+    Ok(Value::Object(result))
 }
 
 // ---------------------------------------------------------------------------

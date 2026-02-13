@@ -39,7 +39,7 @@ pub fn simplify_polymorphism(
         return Ok(PassResult::schema_only(schema));
     }
 
-    let result = walk(&schema, "#", 0, config)?;
+    let result = walk(schema, "#", 0, config)?;
     Ok(PassResult::schema_only(result))
 }
 
@@ -50,30 +50,28 @@ pub fn simplify_polymorphism(
 /// Recursively descend through the schema tree, renaming `oneOf` to `anyOf`
 /// and handling collisions.
 fn walk(
-    node: &Value,
+    node: Value,
     path: &str,
     depth: usize,
     config: &ConvertOptions,
 ) -> Result<Value, ConvertError> {
     if depth > config.max_depth {
-        return Ok(node.clone());
+        return Ok(node);
     }
 
     match node {
-        Value::Object(obj) => {
-            let mut new_obj = obj.clone();
-
+        Value::Object(mut obj) => {
             // --- Rename oneOf → anyOf (with collision handling) ---
-            rename_oneof_to_anyof(&mut new_obj);
+            rename_oneof_to_anyof(&mut obj);
 
             // --- Recurse into all child schemas via shared traversal ---
-            recurse_into_children(&mut new_obj, path, depth, &mut |val, child_path, d| {
+            recurse_into_children(&mut obj, path, depth, &mut |val, child_path, d| {
                 walk(val, child_path, d, config)
             })?;
 
-            Ok(Value::Object(new_obj))
+            Ok(Value::Object(obj))
         }
-        _ => Ok(node.clone()),
+        other => Ok(other),
     }
 }
 

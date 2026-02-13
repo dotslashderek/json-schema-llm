@@ -31,14 +31,7 @@ pub fn break_recursion(schema: Value, config: &ConvertOptions) -> Result<PassRes
     let mut transforms = Vec::new();
     let mut ref_counts: HashMap<String, usize> = HashMap::new();
 
-    let result = walk(
-        &schema,
-        &defs,
-        config,
-        &mut ref_counts,
-        &mut transforms,
-        "#",
-    )?;
+    let result = walk(schema, &defs, config, &mut ref_counts, &mut transforms, "#")?;
 
     // Safety check: only strip $defs if no dangling $ref nodes remain
     let result = if has_remaining_refs(&result) {
@@ -59,7 +52,7 @@ pub fn break_recursion(schema: Value, config: &ConvertOptions) -> Result<PassRes
 /// into their children. The shared walker's `&mut Map` + callback signature
 /// is incompatible with both requirements.
 fn walk(
-    node: &Value,
+    node: Value,
     defs: &Value,
     config: &ConvertOptions,
     ref_counts: &mut HashMap<String, usize>,
@@ -82,15 +75,15 @@ fn walk(
                     // At the root, skip $defs during traversal — we resolve from the extracted copy
                     continue;
                 }
-                let child_path = build_path(path, &[key]);
+                let child_path = build_path(path, &[&key]);
                 let new_value = walk(value, defs, config, ref_counts, transforms, &child_path)?;
-                new_obj.insert(key.clone(), new_value);
+                new_obj.insert(key, new_value);
             }
             Ok(Value::Object(new_obj))
         }
         Value::Array(arr) => {
             let mut new_arr = Vec::with_capacity(arr.len());
-            for (i, item) in arr.iter().enumerate() {
+            for (i, item) in arr.into_iter().enumerate() {
                 let child_path = build_path(path, &[&i.to_string()]);
                 new_arr.push(walk(
                     item,
@@ -104,7 +97,7 @@ fn walk(
             Ok(Value::Array(new_arr))
         }
         // Scalars pass through
-        _ => Ok(node.clone()),
+        other => Ok(other),
     }
 }
 
@@ -144,7 +137,7 @@ fn resolve_ref(
         // Increment count before recursing
         *ref_counts.entry(ref_str.to_string()).or_insert(0) += 1;
 
-        let result = walk(&def, defs, config, ref_counts, transforms, path)?;
+        let result = walk(def, defs, config, ref_counts, transforms, path)?;
 
         // Decrement count after recursing (backtrack for sibling branches)
         if let Some(c) = ref_counts.get_mut(ref_str) {

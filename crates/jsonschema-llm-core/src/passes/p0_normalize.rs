@@ -347,7 +347,7 @@ fn recurse_children(
         obj,
         path,
         depth,
-        &mut |val, child_path, child_depth| resolve_refs(val, child_path, child_depth, ctx),
+        &mut |val, child_path, child_depth| resolve_refs(&val, child_path, child_depth, ctx),
     )
 }
 
