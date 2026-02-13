@@ -134,7 +134,7 @@ pub fn recurse_into_children<F>(
     walk_fn: &mut F,
 ) -> Result<(), ConvertError>
 where
-    F: FnMut(&Value, &str, usize) -> Result<Value, ConvertError>,
+    F: FnMut(Value, &str, usize) -> Result<Value, ConvertError>,
 {
     // --- Map-of-schemas keywords ---
     // `properties`, `patternProperties`, `$defs`, `definitions`, `dependentSchemas`
@@ -151,7 +151,7 @@ where
                     let mut new_map = Map::new();
                     for (key, val) in map {
                         let child_path = build_path(path, &[keyword, &key]);
-                        new_map.insert(key, walk_fn(&val, &child_path, depth + 1)?);
+                        new_map.insert(key, walk_fn(val, &child_path, depth + 1)?);
                     }
                     obj.insert(keyword.to_string(), Value::Object(new_map));
                 }
@@ -181,7 +181,7 @@ where
         if let Some(val) = obj.remove(keyword) {
             if val.is_object() {
                 let child_path = build_path(path, &[keyword]);
-                let walked = walk_fn(&val, &child_path, depth + 1)?;
+                let walked = walk_fn(val, &child_path, depth + 1)?;
                 obj.insert(keyword.to_string(), walked);
             } else {
                 // Not a schema (e.g. `additionalProperties: false`) — preserve as-is
@@ -199,7 +199,7 @@ where
                     let mut walked = Vec::with_capacity(variants.len());
                     for (i, variant) in variants.into_iter().enumerate() {
                         let child_path = build_path(path, &[keyword, &i.to_string()]);
-                        walked.push(walk_fn(&variant, &child_path, depth + 1)?);
+                        walked.push(walk_fn(variant, &child_path, depth + 1)?);
                     }
                     obj.insert(keyword.to_string(), Value::Array(walked));
                 }
@@ -216,7 +216,7 @@ where
         match items {
             Value::Object(_) => {
                 let child_path = build_path(path, &["items"]);
-                let walked = walk_fn(&items, &child_path, depth + 1)?;
+                let walked = walk_fn(items, &child_path, depth + 1)?;
                 obj.insert("items".to_string(), walked);
             }
             Value::Array(arr) => {
@@ -224,7 +224,7 @@ where
                 let mut walked = Vec::with_capacity(arr.len());
                 for (i, item) in arr.into_iter().enumerate() {
                     let child_path = build_path(path, &["items", &i.to_string()]);
-                    walked.push(walk_fn(&item, &child_path, depth + 1)?);
+                    walked.push(walk_fn(item, &child_path, depth + 1)?);
                 }
                 obj.insert("items".to_string(), Value::Array(walked));
             }
@@ -334,9 +334,9 @@ mod tests {
             obj,
             "#",
             0,
-            &mut |val: &Value, _path: &str, _depth: usize| {
+            &mut |val: Value, _path: &str, _depth: usize| {
                 visit_count.fetch_add(1, Ordering::Relaxed);
-                Ok(val.clone())
+                Ok(val)
             },
         )
         .unwrap();
@@ -361,7 +361,7 @@ mod tests {
             obj,
             "#",
             0,
-            &mut |val: &Value, _path: &str, _depth: usize| Ok(val.clone()),
+            &mut |val: Value, _path: &str, _depth: usize| Ok(val),
         )
         .unwrap();
 
@@ -382,15 +382,10 @@ mod tests {
         let obj = schema.as_object_mut().unwrap();
         let mut paths = Vec::new();
 
-        recurse_into_children(
-            obj,
-            "#",
-            0,
-            &mut |val: &Value, path: &str, _depth: usize| {
-                paths.push(path.to_string());
-                Ok(val.clone())
-            },
-        )
+        recurse_into_children(obj, "#", 0, &mut |val: Value, path: &str, _depth: usize| {
+            paths.push(path.to_string());
+            Ok(val)
+        })
         .unwrap();
 
         assert!(paths.contains(&"#/properties/a~1b".to_string()));
@@ -409,15 +404,10 @@ mod tests {
         let obj = schema.as_object_mut().unwrap();
         let mut paths = Vec::new();
 
-        recurse_into_children(
-            obj,
-            "#",
-            0,
-            &mut |val: &Value, path: &str, _depth: usize| {
-                paths.push(path.to_string());
-                Ok(val.clone())
-            },
-        )
+        recurse_into_children(obj, "#", 0, &mut |val: Value, path: &str, _depth: usize| {
+            paths.push(path.to_string());
+            Ok(val)
+        })
         .unwrap();
 
         assert_eq!(paths.len(), 2);
@@ -441,7 +431,7 @@ mod tests {
             obj,
             "#",
             0,
-            &mut |val: &Value, _path: &str, _depth: usize| Ok(val.clone()),
+            &mut |val: Value, _path: &str, _depth: usize| Ok(val),
         )
         .unwrap();
 

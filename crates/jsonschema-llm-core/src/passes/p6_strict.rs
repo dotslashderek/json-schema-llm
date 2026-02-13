@@ -24,7 +24,7 @@ use super::pass_utils::{enforce_object_strict, is_typed_object};
 /// and wraps optional properties with `anyOf: [T, {type: null}]`.
 pub fn enforce_strict(schema: Value, config: &ConvertOptions) -> Result<PassResult, ConvertError> {
     let mut transforms = Vec::new();
-    let result = walk(&schema, "#", 0, config, &mut transforms)?;
+    let result = walk(schema, "#", 0, config, &mut transforms)?;
     Ok(PassResult::with_transforms(result, transforms))
 }
 
@@ -35,7 +35,7 @@ pub fn enforce_strict(schema: Value, config: &ConvertOptions) -> Result<PassResu
 /// Recursively descend through the schema tree, enforcing strict mode at each
 /// `type: object` node and collecting codec transforms.
 fn walk(
-    node: &Value,
+    node: Value,
     path: &str,
     depth: usize,
     config: &ConvertOptions,
@@ -48,12 +48,10 @@ fn walk(
         });
     }
 
-    let obj = match node.as_object() {
-        Some(o) => o,
-        None => return Ok(node.clone()),
+    let mut result = match node {
+        Value::Object(obj) => obj,
+        other => return Ok(other),
     };
-
-    let mut result = obj.clone();
 
     // If this is a `type: object`, enforce strict mode.
     // Objects without `properties` get sealed with an empty properties map.

@@ -44,7 +44,7 @@ pub fn transpile_dictionaries(
     }
 
     let mut transforms = Vec::new();
-    let result = walk(&schema, "#", 0, config, &mut transforms)?;
+    let result = walk(schema, "#", 0, config, &mut transforms)?;
     Ok(PassResult::with_transforms(result, transforms))
 }
 
@@ -55,7 +55,7 @@ pub fn transpile_dictionaries(
 /// Recursively descend through the schema tree, transpiling map-pattern objects
 /// and collecting codec transforms.
 fn walk(
-    node: &Value,
+    node: Value,
     path: &str,
     depth: usize,
     config: &ConvertOptions,
@@ -68,19 +68,17 @@ fn walk(
         });
     }
 
-    let obj = match node.as_object() {
-        Some(o) => o,
-        None => return Ok(node.clone()),
+    let mut result = match node {
+        Value::Object(obj) => obj,
+        other => return Ok(other),
     };
-
-    let mut result = obj.clone();
 
     // Check for map patterns BEFORE recursing into children.
     if is_pure_map(&result) {
         // Pure map: convert entire object to array.
         let array_schema = transpile_pure_map(&result, path, transforms);
         // Recurse into the newly created items schema.
-        return walk(&array_schema, path, depth + 1, config, transforms);
+        return walk(array_schema, path, depth + 1, config, transforms);
     }
 
     if is_mixed_map(&result) {
