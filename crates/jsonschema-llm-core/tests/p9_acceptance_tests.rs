@@ -288,12 +288,60 @@ fn p9_homogeneous_enum_no_error() {
 }
 
 #[test]
-fn p9_heterogeneous_enum_emits_error() {
+fn p9_heterogeneous_enum_with_objects_handled_by_p8() {
+    // Enums containing objects or null are intercepted by p8 (adaptive opaque)
+    // and converted to opaque strings before p9 runs. P9 should NOT see a
+    // MixedEnumTypes error for these — they're already stringified.
+    //
+    // Note: The `mixed` property is non-required, so p6 (strict mode) wraps
+    // it in `anyOf: [{...}, {type: "null"}]` and promotes it to required.
     let schema = json!({
         "type": "object",
         "properties": {
             "mixed": {
                 "enum": ["red", 1, true, null, { "x": 1 }]
+            }
+        }
+    });
+    let result = convert_strict(&schema);
+
+    // P8 stringifies the enum, then p6 wraps it in anyOf for nullable.
+    // The string variant is inside anyOf[0].
+    let mixed_anyof = result
+        .schema
+        .pointer("/properties/mixed/anyOf")
+        .and_then(|v| v.as_array())
+        .expect("mixed should be wrapped in anyOf by p6 strict mode");
+
+    let has_string_variant = mixed_anyof
+        .iter()
+        .any(|v| v.get("type").and_then(|t| t.as_str()) == Some("string"));
+    assert!(
+        has_string_variant,
+        "p8 should convert enum with objects/null to opaque string"
+    );
+
+    // P9 should NOT report MixedEnumTypes (p8 already handled it)
+    let enum_errors: Vec<_> = result
+        .provider_compat_errors
+        .iter()
+        .filter(|e| matches!(e, ProviderCompatError::MixedEnumTypes { .. }))
+        .collect();
+    assert!(
+        enum_errors.is_empty(),
+        "p8 should handle enums with objects/null before p9 runs"
+    );
+}
+
+#[test]
+fn p9_heterogeneous_enum_without_objects_still_reported() {
+    // Enums with mixed primitive types (no objects or null) are NOT caught
+    // by p8 — they pass through to p9, which reports MixedEnumTypes.
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "mixed": {
+                "enum": ["red", 1, true]
             }
         }
     });
@@ -306,19 +354,8 @@ fn p9_heterogeneous_enum_emits_error() {
     assert_eq!(
         enum_errors.len(),
         1,
-        "mixed-type enum should trigger exactly 1 MixedEnumTypes"
+        "mixed primitive-type enum should trigger exactly 1 MixedEnumTypes"
     );
-
-    if let ProviderCompatError::MixedEnumTypes {
-        types_found, path, ..
-    } = &enum_errors[0]
-    {
-        assert!(types_found.len() > 1, "should report multiple types");
-        assert!(
-            path.contains("mixed"),
-            "path should reference the 'mixed' property, got: {path}"
-        );
-    }
 }
 
 #[test]
