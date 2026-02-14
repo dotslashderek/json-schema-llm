@@ -238,6 +238,184 @@ where
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Opaque string description helpers
+// ---------------------------------------------------------------------------
+
+/// Summarise a sub-schema that is about to be replaced with an opaque
+/// `type: "string"` so that the LLM knows what JSON structure to produce.
+///
+/// Recursively describes the entire sub-tree in a compact TypeScript-like
+/// syntax so the LLM can produce structurally correct stringified JSON.
+/// Also extracts constraint hints (contains, minItems, maxItems, etc.) so
+/// the LLM knows about semantic requirements that would otherwise be lost.
+///
+/// Example output:
+///   `"A JSON-encoded string. Structure: [any]. Must contain: \"magic_token\". Produce valid, parseable JSON."`
+pub(crate) fn build_opaque_description(schema: &Value) -> String {
+    let structure = describe_schema_structure(schema, 0);
+    let constraints = collect_constraint_hints(schema);
+    if constraints.is_empty() {
+        format!("A JSON-encoded string. Structure: {structure}. Produce valid, parseable JSON.")
+    } else {
+        format!(
+            "A JSON-encoded string. Structure: {structure}. {constraints} Produce valid, parseable JSON."
+        )
+    }
+}
+
+/// Extract human-readable constraint hints from a schema that is about to be
+/// opaque-stringified. These constraints would otherwise be silently lost.
+fn collect_constraint_hints(schema: &Value) -> String {
+    let obj = match schema.as_object() {
+        Some(o) => o,
+        None => return String::new(),
+    };
+
+    let mut hints = Vec::new();
+
+    // contains constraint
+    if let Some(contains) = obj.get("contains") {
+        if let Some(const_val) = contains.get("const") {
+            let val_str = serde_json::to_string(const_val).unwrap_or_default();
+            hints.push(format!("array must include {val_str} as an element"));
+        } else if let Some(type_val) = contains.get("type").and_then(|v| v.as_str()) {
+            hints.push(format!(
+                "array must include at least one element of type {type_val}"
+            ));
+        } else {
+            hints.push("array must include at least one matching element".to_string());
+        }
+    }
+
+    // minContains / maxContains
+    if let Some(n) = obj.get("minContains").and_then(|v| v.as_u64()) {
+        if n > 1 {
+            hints.push(format!("minimum {n} matching item(s)"));
+        }
+    }
+    if let Some(n) = obj.get("maxContains").and_then(|v| v.as_u64()) {
+        hints.push(format!("maximum {n} matching item(s)"));
+    }
+
+    // minItems / maxItems
+    if let Some(n) = obj.get("minItems").and_then(|v| v.as_u64()) {
+        hints.push(format!("minimum {n} item(s)"));
+    }
+    if let Some(n) = obj.get("maxItems").and_then(|v| v.as_u64()) {
+        hints.push(format!("maximum {n} item(s)"));
+    }
+
+    // uniqueItems
+    if obj.get("uniqueItems").and_then(|v| v.as_bool()) == Some(true) {
+        hints.push("items must be unique".to_string());
+    }
+
+    hints.join(". ")
+}
+
+/// Recursively convert a schema into a compact structural description.
+/// Uses a TypeScript-like object/array syntax for clarity.
+/// Depth parameter prevents runaway recursion (cap at 10 levels of description).
+pub(crate) fn describe_schema_structure(schema: &Value, depth: usize) -> String {
+    if depth > 10 {
+        return "...".to_string();
+    }
+
+    // [New] Check for enum *before* type check, as enum is more specific
+    if let Some(enum_vals) = schema.get("enum").and_then(|v| v.as_array()) {
+        if !enum_vals.is_empty() {
+            if enum_vals.len() <= 10 {
+                // List values directly
+                let variants: Vec<String> = enum_vals
+                    .iter()
+                    .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "...".to_string()))
+                    .collect();
+                return format!("One of: [{}]", variants.join(", "));
+            } else {
+                return format!("One of {} allowed values", enum_vals.len());
+            }
+        }
+    }
+
+    let schema_type = schema.get("type").and_then(|v| v.as_str()).unwrap_or("any");
+
+    match schema_type {
+        "object" => {
+            if let Some(props) = schema.get("properties").and_then(|v| v.as_object()) {
+                let fields: Vec<String> = props
+                    .iter()
+                    .take(30) // cap field count
+                    .map(|(name, sub)| {
+                        let desc = describe_schema_structure(sub, depth + 1);
+                        format!("{name}: {desc}")
+                    })
+                    .collect();
+                let suffix = if props.len() > 30 {
+                    ", ...".to_string()
+                } else {
+                    String::new()
+                };
+                format!("{{{}{}}}", fields.join(", "), suffix)
+            } else {
+                "object".to_string()
+            }
+        }
+        "array" => {
+            // Case 1: Uniform array (no prefixItems, items is schema)
+            if schema.get("prefixItems").is_none() {
+                if let Some(items) = schema.get("items") {
+                    if items.is_object() {
+                        let item_desc = describe_schema_structure(items, depth + 1);
+                        return format!("[{item_desc}]");
+                    }
+                }
+            }
+
+            // Case 2: Tuple / Mixed / Prefix
+            let mut parts = Vec::new();
+            if let Some(prefix) = schema.get("prefixItems").and_then(|v| v.as_array()) {
+                for item in prefix.iter().take(10) {
+                    parts.push(describe_schema_structure(item, depth + 1));
+                }
+            } else if let Some(items_arr) = schema.get("items").and_then(|v| v.as_array()) {
+                // draft-4 tuple (if not normalized)
+                for item in items_arr.iter().take(10) {
+                    parts.push(describe_schema_structure(item, depth + 1));
+                }
+            }
+
+            let mut closed = false;
+            if let Some(items) = schema.get("items") {
+                if items.as_bool() == Some(false) {
+                    closed = true;
+                } else if items.is_object() {
+                    // prefix + open items
+                    let item_desc = describe_schema_structure(items, depth + 1);
+                    parts.push(format!("...{}", item_desc));
+                } else if items.as_bool() == Some(true) {
+                    if parts.is_empty() {
+                        parts.push("any".to_string());
+                    } else {
+                        parts.push("...any".to_string());
+                    }
+                }
+            } else {
+                // items missing -> default true (unless we processed legacy items array, which usually defaults to true too)
+                if parts.is_empty() {
+                    parts.push("any".to_string());
+                } else {
+                    parts.push("...any".to_string());
+                }
+            }
+
+            let suffix = if closed { " (fixed length)" } else { "" };
+            format!("[{}]{suffix}", parts.join(", "))
+        }
+        _ => schema_type.to_string(),
+    }
+}
+
 // ===========================================================================
 // Tests
 // ===========================================================================
