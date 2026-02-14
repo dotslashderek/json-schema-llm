@@ -15,4 +15,5 @@ pub mod p4_opaque;
 pub mod p5_recursion;
 pub mod p6_strict;
 pub mod p7_constraints;
+pub mod p8_adaptive_opaque;
 pub mod p9_provider_compat;

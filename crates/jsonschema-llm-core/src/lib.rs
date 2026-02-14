@@ -106,6 +106,11 @@ pub fn convert(schema: &Value, options: &ConvertOptions) -> Result<ConvertResult
         schema = p6.merge_into_codec(&mut codec);
     }
 
+    // Pass 8: Adaptive opaque stringification (before constraint pruning
+    // so it can detect `contains`, closed-tuple `prefixItems`, etc.)
+    let p8 = passes::p8_adaptive_opaque::adaptive_opaque(schema, options)?;
+    let schema = p8.merge_into_codec(&mut codec);
+
     // Pass 7: Constraint pruning
     let p7 = passes::p7_constraints::prune_constraints(schema, options)?;
     let schema = p7.merge_into_codec(&mut codec);
