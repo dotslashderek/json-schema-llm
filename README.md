@@ -217,10 +217,10 @@ The converted schemas were accepted by **OpenAI Strict Mode**. The LLM generated
     │ Pass 9: Provider Compat      │  ✅ Pre-flight provider validation
     └────────┬─────────────────────┘
              │
-    ┌────────▼────────┐   ┌───────────┐
+    ┌────────▼──────-──┐   ┌───────────┐
     │ Converted Schema │   │   Codec   │
     │ (LLM-compatible) │   │ (sidecar) │
-    └─────────────────┘   └───────────┘
+    └────────────────-─┘   └───────────┘
 ```
 
 ### Pass Summaries
