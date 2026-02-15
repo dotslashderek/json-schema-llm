@@ -1,0 +1,2 @@
+openai>=1.0,<2
+jsonschema>=4.0,<5
