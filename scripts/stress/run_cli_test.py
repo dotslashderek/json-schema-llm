@@ -473,6 +473,10 @@ def main():
 
     if args.retries < 0:
         parser.error("--retries must be >= 0")
+    if args.retry_delay < 0:
+        parser.error("--retry-delay must be >= 0")
+    if args.max_delay < 0:
+        parser.error("--max-delay must be >= 0")
 
     client = OpenAI()
 
