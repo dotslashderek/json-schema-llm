@@ -191,8 +191,11 @@ jobs:
         working-directory: crates/jsonschema-llm-python
 
   java:
-    name: Java Bindings
+    name: Java Bindings (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: ["17", "22"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -200,7 +203,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "22"
+          java-version: ${{ matrix.java-version }}
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build native library
@@ -209,14 +212,14 @@ jobs:
       - name: Run Rust FFI tests
         run: cargo test -p jsonschema-llm-java
 
-      - name: Run Java tests (Panama)
-        run: ./gradlew test
+      - name: Run Java tests (Panama + JNI)
+        if: matrix.java-version == '22'
+        run: ./gradlew check
         working-directory: bindings/java
         env:
           JAVA_TOOL_OPTIONS: "--enable-native-access=ALL-UNNAMED"
 
-      - name: Run Java tests (JNI Fallback)
+      - name: Run Java tests (JNI only)
+        if: matrix.java-version == '17'
         run: ./gradlew testJni
         working-directory: bindings/java
-        env:
-          JAVA_TOOL_OPTIONS: "--enable-native-access=ALL-UNNAMED"
