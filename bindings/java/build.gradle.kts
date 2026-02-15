@@ -17,14 +17,26 @@ dependencies {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_22
-    targetCompatibility = JavaVersion.VERSION_22
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+// PanamaBinding requires java.lang.foreign.* (Java 22+).
+// On JDK <22 we exclude it from compilation; at runtime JsonSchemaLlm
+// catches the ClassNotFoundException and falls back to JNI.
+val hasPanama = JavaVersion.current() >= JavaVersion.VERSION_22
+if (!hasPanama) {
+    sourceSets.main {
+        java.exclude("**/PanamaBinding.java")
+    }
 }
 
 tasks.test {
     useJUnitPlatform()
     // Enable native access for Panama FFM
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+    // Panama tests require JDK 22+
+    enabled = hasPanama
 }
 
 val testJni = tasks.register<Test>("testJni") {
