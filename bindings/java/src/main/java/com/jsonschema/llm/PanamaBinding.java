@@ -7,27 +7,34 @@ import java.nio.charset.StandardCharsets;
 class PanamaBinding implements Binding {
     private static final MethodHandle convertHandle;
     private static final MethodHandle rehydrateHandle;
+    private static final MethodHandle lastErrorHandle;
     private static final MethodHandle freeStringHandle;
 
     static {
         NativeLoader.load();
-        
+
         SymbolLookup lookup = SymbolLookup.loaderLookup();
         Linker linker = Linker.nativeLinker();
-        
-        // char *jsonschema_llm_convert(const char *schema_json, const char *options_json);
+
+        // char *jsonschema_llm_convert(const char *, const char *)
         convertHandle = linker.downcallHandle(
             lookup.find("jsonschema_llm_convert").orElseThrow(),
             FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
         );
 
-        // char *jsonschema_llm_rehydrate(const char *data_json, const char *codec_json, const char *original_schema_json);
+        // char *jsonschema_llm_rehydrate(const char *, const char *, const char *)
         rehydrateHandle = linker.downcallHandle(
             lookup.find("jsonschema_llm_rehydrate").orElseThrow(),
             FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
         );
 
-        // void jsonschema_llm_free_string(char *ptr);
+        // const char *jsonschema_llm_last_error()
+        lastErrorHandle = linker.downcallHandle(
+            lookup.find("jsonschema_llm_last_error").orElseThrow(),
+            FunctionDescriptor.of(ValueLayout.ADDRESS)
+        );
+
+        // void jsonschema_llm_free_string(char *)
         freeStringHandle = linker.downcallHandle(
             lookup.find("jsonschema_llm_free_string").orElseThrow(),
             FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
@@ -41,16 +48,18 @@ class PanamaBinding implements Binding {
             MemorySegment optionsSeg = arena.allocateFrom(optionsJson);
 
             MemorySegment resultSeg = (MemorySegment) convertHandle.invokeExact(schemaSeg, optionsSeg);
-            
+
             if (resultSeg.equals(MemorySegment.NULL)) {
-                throw new RuntimeException("Convert returned NULL");
+                throw new JsonSchemaLlmException(getLastError(), "ffi_error", null);
             }
-            
+
             resultSeg = resultSeg.reinterpret(Long.MAX_VALUE);
             String result = resultSeg.getString(0, StandardCharsets.UTF_8);
             freeStringHandle.invokeExact(resultSeg);
-            
+
             return result;
+        } catch (JsonSchemaLlmException e) {
+            throw e;
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -64,18 +73,32 @@ class PanamaBinding implements Binding {
             MemorySegment schemaSeg = arena.allocateFrom(originalSchemaJson);
 
             MemorySegment resultSeg = (MemorySegment) rehydrateHandle.invokeExact(dataSeg, codecSeg, schemaSeg);
-            
+
             if (resultSeg.equals(MemorySegment.NULL)) {
-                throw new RuntimeException("Rehydrate returned NULL");
+                throw new JsonSchemaLlmException(getLastError(), "ffi_error", null);
             }
-            
+
             resultSeg = resultSeg.reinterpret(Long.MAX_VALUE);
             String result = resultSeg.getString(0, StandardCharsets.UTF_8);
             freeStringHandle.invokeExact(resultSeg);
-            
+
             return result;
+        } catch (JsonSchemaLlmException e) {
+            throw e;
         } catch (Throwable e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private String getLastError() {
+        try {
+            MemorySegment errSeg = (MemorySegment) lastErrorHandle.invokeExact();
+            if (!errSeg.equals(MemorySegment.NULL)) {
+                return errSeg.reinterpret(Long.MAX_VALUE).getString(0, StandardCharsets.UTF_8);
+            }
+            return "Unknown FFI error (no last_error available)";
+        } catch (Throwable e) {
+            return "Failed to retrieve last_error: " + e.getMessage();
         }
     }
 }
