@@ -4,6 +4,12 @@ public class JsonSchemaLlmException extends RuntimeException {
     private final String code;
     private final String path;
 
+    public JsonSchemaLlmException(String message) {
+        super(message);
+        this.code = null;
+        this.path = null;
+    }
+
     public JsonSchemaLlmException(String message, String code, String path) {
         super(message);
         this.code = code;
