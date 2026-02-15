@@ -2,14 +2,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import OpenAI from 'openai';
-import Ajv from 'ajv';
+import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 import { convert, rehydrate } from 'jsonschema-llm';
 import type { ResponseFormatJSONSchema } from 'openai/resources/shared';
 
 // Initialize clients
 const client = new OpenAI(); // env var OPENAI_API_KEY expected
-const ajv = new Ajv({ allErrors: true, strict: false });
+const ajv = new Ajv2020({ allErrors: true, strict: false });
 addFormats(ajv);
 
 const SCHEMA_DIR = path.resolve(__dirname, '../../../tests/schemas/stress');
