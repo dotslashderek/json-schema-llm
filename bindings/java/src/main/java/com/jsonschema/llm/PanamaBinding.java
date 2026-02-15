@@ -18,27 +18,24 @@ class PanamaBinding implements Binding {
 
         // char *jsonschema_llm_convert(const char *, const char *)
         convertHandle = linker.downcallHandle(
-            lookup.find("jsonschema_llm_convert").orElseThrow(),
-            FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
-        );
+                lookup.find("jsonschema_llm_convert").orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
 
         // char *jsonschema_llm_rehydrate(const char *, const char *, const char *)
         rehydrateHandle = linker.downcallHandle(
-            lookup.find("jsonschema_llm_rehydrate").orElseThrow(),
-            FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
-        );
+                lookup.find("jsonschema_llm_rehydrate").orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
+                        ValueLayout.ADDRESS));
 
         // const char *jsonschema_llm_last_error()
         lastErrorHandle = linker.downcallHandle(
-            lookup.find("jsonschema_llm_last_error").orElseThrow(),
-            FunctionDescriptor.of(ValueLayout.ADDRESS)
-        );
+                lookup.find("jsonschema_llm_last_error").orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS));
 
         // void jsonschema_llm_free_string(char *)
         freeStringHandle = linker.downcallHandle(
-            lookup.find("jsonschema_llm_free_string").orElseThrow(),
-            FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
-        );
+                lookup.find("jsonschema_llm_free_string").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
     }
 
     @Override
@@ -53,6 +50,8 @@ class PanamaBinding implements Binding {
                 throw new JsonSchemaLlmException(getLastError(), "ffi_error", null);
             }
 
+            // Safe: reinterpret to max size since we only read until the null terminator.
+            // The FFI contract guarantees a valid, null-terminated C string.
             resultSeg = resultSeg.reinterpret(Long.MAX_VALUE);
             String result = resultSeg.getString(0, StandardCharsets.UTF_8);
             freeStringHandle.invokeExact(resultSeg);
@@ -78,6 +77,8 @@ class PanamaBinding implements Binding {
                 throw new JsonSchemaLlmException(getLastError(), "ffi_error", null);
             }
 
+            // Safe: reinterpret to max size since we only read until the null terminator.
+            // The FFI contract guarantees a valid, null-terminated C string.
             resultSeg = resultSeg.reinterpret(Long.MAX_VALUE);
             String result = resultSeg.getString(0, StandardCharsets.UTF_8);
             freeStringHandle.invokeExact(resultSeg);
