@@ -123,11 +123,20 @@ fn resolve_ref(
             original_ref: ref_str.to_string(),
         });
 
+        // Generate a concrete example from the definition's properties
+        let example = lookup_def(ref_str, defs)
+            .as_ref()
+            .map(|def| build_example_from_def(def, &type_name))
+            .unwrap_or_else(|| format!("{{\\\"key\\\": \\\"value\\\"}}"));
+
         return Ok(serde_json::json!({
             "type": "string",
             "description": format!(
-                "JSON-encoded {}. Parse as JSON after generation.",
-                type_name
+                "MUST be a valid JSON object serialized as a string. \
+                 This represents a {type_name} that was too deeply nested to inline. \
+                 Output a complete JSON object as a string value, e.g. \
+                 \"{example}\". \
+                 Do NOT output plain text — the value must parse as JSON.",
             )
         }));
     }
@@ -168,6 +177,52 @@ fn lookup_def(ref_str: &str, defs: &Value) -> Option<Value> {
 /// Extract a human-readable type name from a `$ref` pointer.
 fn extract_type_name(ref_str: &str) -> String {
     ref_str.rsplit('/').next().unwrap_or(ref_str).to_string()
+}
+
+/// Build a concrete JSON example string from a schema definition.
+///
+/// Introspects the definition's `properties` to produce type-appropriate
+/// placeholder values (e.g., `{"value":"...","children":null}`).
+/// This gives the LLM a much stronger signal than a generic `{"key":"value"}`.
+fn build_example_from_def(def: &Value, type_name: &str) -> String {
+    let props = match def.get("properties").and_then(|p| p.as_object()) {
+        Some(p) if !p.is_empty() => p,
+        _ => return format!("{{\\\"type\\\":\\\"{type_name}\\\"}}"),
+    };
+
+    let mut parts = Vec::new();
+    for (key, prop_schema) in props {
+        let placeholder = infer_placeholder(prop_schema);
+        parts.push(format!("\\\"{}\\\":{}", key, placeholder));
+    }
+    format!("{{{}}}", parts.join(","))
+}
+
+/// Infer a placeholder value for a property schema.
+///
+/// Returns an escaped JSON fragment suitable for embedding in a description string.
+fn infer_placeholder(schema: &Value) -> &'static str {
+    // Check for anyOf/oneOf with null (nullable) — use null as placeholder
+    for kw in &["anyOf", "oneOf"] {
+        if let Some(variants) = schema.get(*kw).and_then(|v| v.as_array()) {
+            let has_null = variants
+                .iter()
+                .any(|v| v.get("type").and_then(|t| t.as_str()) == Some("null"));
+            if has_null {
+                return "null";
+            }
+        }
+    }
+
+    match schema.get("type").and_then(|t| t.as_str()) {
+        Some("string") => "\\\"...\\\"",
+        Some("integer") | Some("number") => "0",
+        Some("boolean") => "false",
+        Some("array") => "[]",
+        Some("object") => "{}",
+        Some("null") => "null",
+        _ => "\\\"...\\\"", // default to string-like
+    }
 }
 
 /// Remove `$defs` from the root schema if present.

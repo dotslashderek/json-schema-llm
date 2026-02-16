@@ -29,11 +29,11 @@ use crate::schema_utils::recurse_into_children;
 
 /// Default description for opaque objects that have no existing description.
 const DEFAULT_OPAQUE_DESC: &str =
-    "A JSON-encoded string representing the object. Parse with JSON.parse() after generation.";
+    "MUST be a valid JSON object serialized as a string, e.g. \"{\\\"key\\\": \\\"value\\\"}\". Do NOT output plain text — the value must parse with JSON.parse().";
 
 /// Suffix appended to existing descriptions for opaque objects.
 const OPAQUE_DESC_SUFFIX: &str =
-    "\n\n(Note: This field represents an opaque object. The value should be a JSON-encoded string. Parse with JSON.parse() after generation.)";
+    "\n\n(Note: This field MUST be a valid JSON object serialized as a string. Do NOT output plain text — the value must parse with JSON.parse().)";
 
 /// Apply opaque type stringification to a schema.
 ///
@@ -424,7 +424,7 @@ mod tests {
         assert_eq!(output["type"], "string");
         let desc = output["description"].as_str().unwrap();
         assert!(desc.starts_with("Plugin configuration"));
-        assert!(desc.contains("JSON-encoded string"));
+        assert!(desc.contains("MUST be a valid JSON"));
         assert_eq!(transforms.len(), 1);
     }
 
@@ -820,7 +820,7 @@ mod tests {
         assert_eq!(output["type"], "string");
         let desc = output["description"].as_str().unwrap();
         assert!(desc.starts_with("Plugin configuration"));
-        assert!(desc.contains("JSON-encoded string"));
+        assert!(desc.contains("MUST be a valid JSON"));
         assert_eq!(transforms.len(), 1);
     }
 

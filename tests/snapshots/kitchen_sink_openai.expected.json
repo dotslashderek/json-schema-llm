@@ -111,7 +111,7 @@
     "extraData": {
       "anyOf": [
         {
-          "description": "A JSON-encoded string representing the object. Parse with JSON.parse() after generation.",
+          "description": "MUST be a valid JSON object serialized as a string, e.g. \"{\\\"key\\\": \\\"value\\\"}\". Do NOT output plain text \u2014 the value must parse with JSON.parse().",
           "type": "string"
         },
         {
@@ -192,7 +192,7 @@
                                                   "additionalProperties": false,
                                                   "properties": {
                                                     "children": {
-                                                      "description": "A JSON-encoded string. Structure: any. Produce valid, parseable JSON.",
+                                                      "description": "MUST be a valid JSON value serialized as a string. Structure: any. Do NOT output plain text \u2014 the value must parse with JSON.parse().",
                                                       "type": "string"
                                                     },
                                                     "name": {
@@ -281,7 +281,7 @@
     "preferences": {
       "anyOf": [
         {
-          "description": "Opaque preferences blob\n\n(Note: This field represents an opaque object. The value should be a JSON-encoded string. Parse with JSON.parse() after generation.)",
+          "description": "Opaque preferences blob\n\n(Note: This field MUST be a valid JSON object serialized as a string. Do NOT output plain text \u2014 the value must parse with JSON.parse().)",
           "type": "string"
         },
         {
