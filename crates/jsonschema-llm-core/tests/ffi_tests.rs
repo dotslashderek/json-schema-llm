@@ -267,18 +267,22 @@ fn test_convert_json_malformed_corpus() {
 // Codex review — Semantic deserialization error coverage
 // ---------------------------------------------------------------------------
 
-/// Valid JSON but missing required fields → error must still be structured JSON
+/// Empty options object `{}` uses serde defaults — succeeds with default ConvertOptions.
 #[test]
-fn test_convert_json_missing_options_fields() {
+fn test_convert_json_empty_options_uses_defaults() {
     let schema = r#"{"type": "object"}"#;
-    // Valid JSON object, but missing required fields for ConvertOptions
+    // Empty object should use serde defaults (target=openai-strict, max-depth=50, etc.)
     let result = convert_json(schema, "{}");
-    assert!(result.is_err());
+    assert!(
+        result.is_ok(),
+        "Empty options should use defaults, got: {:?}",
+        result.err()
+    );
 
-    let err_json: serde_json::Value =
-        serde_json::from_str(&result.unwrap_err()).expect("Error string must be valid JSON");
-    assert_eq!(err_json["code"].as_str().unwrap(), "json_parse_error");
-    assert!(err_json.get("message").is_some());
+    let parsed: serde_json::Value = serde_json::from_str(&result.unwrap()).unwrap();
+    assert!(parsed.get("apiVersion").is_some());
+    assert!(parsed.get("schema").is_some());
+    assert!(parsed.get("codec").is_some());
 }
 
 /// Valid JSON but invalid enum value → error must still be structured JSON
@@ -475,21 +479,22 @@ fn test_convert_bridge_camel_case_codec_fields() {
 // Edge-Case Coverage — FFI Hardening (#37 epic closure)
 // ===========================================================================
 
-/// Default options via JSON bridge — `"{}"` should fail because `target` is required.
-/// This documents the contract: consumers MUST provide at least `target`.
+/// Partial options via JSON bridge — omitted fields use serde defaults.
+/// This documents the contract: consumers may provide any subset of options.
 #[test]
-fn test_convert_json_default_options_requires_target() {
+fn test_convert_json_partial_options_use_defaults() {
     let schema =
         r#"{"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}"#;
-    // ConvertOptions requires `target` — empty object should fail deserialization
-    let result = convert_json(schema, "{}");
+    // Partial options — only max-depth; target, recursion-limit, polymorphism use defaults
+    let result = convert_json(schema, r#"{"max-depth": 10}"#);
     assert!(
-        result.is_err(),
-        "Empty options must fail (target is required)"
+        result.is_ok(),
+        "Partial options should use defaults for omitted fields, got: {:?}",
+        result.err()
     );
 
-    let err: serde_json::Value = serde_json::from_str(&result.unwrap_err()).unwrap();
-    assert_eq!(err["code"].as_str().unwrap(), "json_parse_error");
+    let parsed: serde_json::Value = serde_json::from_str(&result.unwrap()).unwrap();
+    assert_eq!(parsed["apiVersion"].as_str().unwrap(), "1.0");
 }
 
 /// Panic-safety: empty schema `{}` (valid Draft 2020-12, means "accept anything").
