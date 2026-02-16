@@ -29,15 +29,19 @@
 //! ```text
 //! #[repr(C)]
 //! struct JslResult {
-//!     status: u32,  // 0 = ok, 1 = error (bridge JSON), 2 = panic (captured)
+//!     status: u32,  // 0 = ok, 1 = error (bridge JSON)
 //!     ptr: u32,     // pointer to UTF-8 JSON string
 //!     len: u32,     // byte length of JSON string
 //! }
 //! ```
 //!
 //! The host must: read the result → copy the JSON bytes → call `jsl_result_free`.
-
-use std::panic;
+//!
+//! ### Panic Behavior
+//!
+//! This module compiles with `panic = "abort"` (the `wasm32-wasip1` default).
+//! Panics will trap the WASM module — hosts should handle WASM traps at the
+//! runtime level. All internal code paths return errors rather than panicking.
 
 // ---------------------------------------------------------------------------
 // Result protocol
@@ -46,7 +50,6 @@ use std::panic;
 /// Status codes for the JslResult protocol.
 const STATUS_OK: u32 = 0;
 const STATUS_ERROR: u32 = 1;
-const STATUS_PANIC: u32 = 2;
 
 /// C-ABI result struct returned from `jsl_convert` and `jsl_rehydrate`.
 ///
@@ -66,6 +69,17 @@ impl JslResult {
     }
 }
 
+/// Leak a string as a `(ptr, len)` pair using a boxed slice.
+///
+/// Using `into_boxed_slice()` ensures capacity == len, so the deallocation
+/// in `jsl_result_free` uses the correct layout.
+fn leak_string(s: String) -> (u32, u32) {
+    let boxed: Box<[u8]> = s.into_bytes().into_boxed_slice();
+    let len = boxed.len() as u32;
+    let ptr = Box::into_raw(boxed) as *mut u8 as u32;
+    (ptr, len)
+}
+
 /// Build a `JslResult` from a `Result<String, String>` returned by core bridge
 /// functions.
 fn result_from_bridge(outcome: Result<String, String>) -> *mut JslResult {
@@ -73,29 +87,22 @@ fn result_from_bridge(outcome: Result<String, String>) -> *mut JslResult {
         Ok(json) => (STATUS_OK, json),
         Err(json) => (STATUS_ERROR, json),
     };
-    let bytes = payload.into_bytes();
-    let len = bytes.len() as u32;
-    let ptr = bytes.as_ptr() as u32;
-    std::mem::forget(bytes);
-
+    let (ptr, len) = leak_string(payload);
     JslResult { status, ptr, len }.into_raw()
 }
 
-/// Build a `JslResult` for a captured panic.
-fn result_from_panic(info: &str) -> *mut JslResult {
+/// Build an error `JslResult` from a UTF-8 decoding failure or similar
+/// pre-bridge error.
+fn result_from_input_error(code: &str, message: &str) -> *mut JslResult {
     let payload = serde_json::json!({
-        "code": "internal_panic",
-        "message": info,
+        "code": code,
+        "message": message,
         "path": null
     })
     .to_string();
-    let bytes = payload.into_bytes();
-    let len = bytes.len() as u32;
-    let ptr = bytes.as_ptr() as u32;
-    std::mem::forget(bytes);
-
+    let (ptr, len) = leak_string(payload);
     JslResult {
-        status: STATUS_PANIC,
+        status: STATUS_ERROR,
         ptr,
         len,
     }
@@ -131,6 +138,8 @@ pub unsafe extern "C" fn jsl_free(ptr: u32, len: u32) {
     if ptr == 0 || len == 0 {
         return;
     }
+    // jsl_alloc uses Vec::with_capacity which has capacity == len,
+    // so reconstructing with capacity == len is correct.
     let _ = Vec::from_raw_parts(ptr as *mut u8, len as usize, len as usize);
 }
 
@@ -150,13 +159,47 @@ pub unsafe extern "C" fn jsl_result_free(result_ptr: u32) {
     }
     let result = Box::from_raw(result_ptr as *mut JslResult);
     if result.ptr != 0 && result.len != 0 {
-        let _ = Vec::from_raw_parts(
+        // Payload was created via `leak_string` which uses `into_boxed_slice()`,
+        // guaranteeing capacity == len. Reconstruct as boxed slice for dealloc.
+        let _ = Box::from_raw(std::slice::from_raw_parts_mut(
             result.ptr as *mut u8,
             result.len as usize,
-            result.len as usize,
-        );
+        ));
     }
     // Box dropped here, freeing the JslResult struct
+}
+
+/// Read a UTF-8 string from guest linear memory with checked decoding.
+///
+/// Returns `Ok(String)` on valid UTF-8, or `Err(JslResult ptr)` on invalid input.
+///
+/// # Null / zero-length handling
+///
+/// - `len == 0` → returns `Ok("")` (empty string, no memory access)
+/// - `ptr == 0 && len > 0` → returns `Err` with `invalid_pointer` code
+///
+/// # Safety
+///
+/// `ptr` must point to `len` valid bytes in the WASM linear memory.
+unsafe fn read_guest_str(ptr: u32, len: u32) -> Result<String, *mut JslResult> {
+    if len == 0 {
+        return Ok(String::new());
+    }
+    if ptr == 0 {
+        return Err(result_from_input_error(
+            "invalid_pointer",
+            "null pointer with non-zero length",
+        ));
+    }
+    let slice = std::slice::from_raw_parts(ptr as *const u8, len as usize);
+    std::str::from_utf8(slice)
+        .map(|s| s.to_owned())
+        .map_err(|e| {
+            result_from_input_error(
+                "invalid_utf8",
+                &format!("invalid UTF-8 at byte offset {}", e.valid_up_to()),
+            )
+        })
 }
 
 // ---------------------------------------------------------------------------
@@ -181,35 +224,39 @@ pub extern "C" fn jsl_convert(
     opts_ptr: u32,
     opts_len: u32,
 ) -> u32 {
-    let result = panic::catch_unwind(|| {
-        let schema_str = unsafe {
-            let slice = std::slice::from_raw_parts(schema_ptr as *const u8, schema_len as usize);
-            std::str::from_utf8_unchecked(slice)
+    // --- Read schema (checked UTF-8) ---
+    let schema_str = match unsafe { read_guest_str(schema_ptr, schema_len) } {
+        Ok(s) => s,
+        Err(err_ptr) => return err_ptr as u32,
+    };
+
+    // --- Read options (checked UTF-8, with default fallback) ---
+    let default_opts = serde_json::to_string(&jsonschema_llm_core::ConvertOptions::default())
+        .expect("default options serialize");
+    let effective_opts: String = if opts_ptr == 0 || opts_len == 0 {
+        default_opts
+    } else {
+        let opts_str = match unsafe { read_guest_str(opts_ptr, opts_len) } {
+            Ok(s) => s,
+            Err(err_ptr) => return err_ptr as u32,
         };
 
-        let opts_str = if opts_ptr == 0 || opts_len == 0 {
-            "{}"
+        // Detect empty objects (e.g., "{}", "{ }", "{\n}") by parsing
+        let is_empty = serde_json::from_str::<serde_json::Value>(&opts_str)
+            .map(|v| matches!(&v, serde_json::Value::Object(m) if m.is_empty()))
+            .unwrap_or(false);
+
+        if is_empty {
+            default_opts
         } else {
-            unsafe {
-                let slice = std::slice::from_raw_parts(opts_ptr as *const u8, opts_len as usize);
-                std::str::from_utf8_unchecked(slice)
-            }
-        };
-
-        jsonschema_llm_core::convert_json(schema_str, opts_str)
-    });
-
-    match result {
-        Ok(bridge_result) => result_from_bridge(bridge_result) as u32,
-        Err(panic_info) => {
-            let msg = panic_info
-                .downcast_ref::<String>()
-                .map(|s| s.as_str())
-                .or_else(|| panic_info.downcast_ref::<&str>().copied())
-                .unwrap_or("unknown panic");
-            result_from_panic(msg) as u32
+            opts_str
         }
-    }
+    };
+
+    result_from_bridge(jsonschema_llm_core::convert_json(
+        &schema_str,
+        &effective_opts,
+    )) as u32
 }
 
 /// Rehydrate LLM output back to the original schema shape.
@@ -232,32 +279,23 @@ pub extern "C" fn jsl_rehydrate(
     schema_ptr: u32,
     schema_len: u32,
 ) -> u32 {
-    let result = panic::catch_unwind(|| {
-        let data_str = unsafe {
-            let slice = std::slice::from_raw_parts(data_ptr as *const u8, data_len as usize);
-            std::str::from_utf8_unchecked(slice)
-        };
-        let codec_str = unsafe {
-            let slice = std::slice::from_raw_parts(codec_ptr as *const u8, codec_len as usize);
-            std::str::from_utf8_unchecked(slice)
-        };
-        let schema_str = unsafe {
-            let slice = std::slice::from_raw_parts(schema_ptr as *const u8, schema_len as usize);
-            std::str::from_utf8_unchecked(slice)
-        };
+    // --- Read all three inputs (checked UTF-8) ---
+    let data_str = match unsafe { read_guest_str(data_ptr, data_len) } {
+        Ok(s) => s,
+        Err(err_ptr) => return err_ptr as u32,
+    };
+    let codec_str = match unsafe { read_guest_str(codec_ptr, codec_len) } {
+        Ok(s) => s,
+        Err(err_ptr) => return err_ptr as u32,
+    };
+    let schema_str = match unsafe { read_guest_str(schema_ptr, schema_len) } {
+        Ok(s) => s,
+        Err(err_ptr) => return err_ptr as u32,
+    };
 
-        jsonschema_llm_core::rehydrate_json(data_str, codec_str, schema_str)
-    });
-
-    match result {
-        Ok(bridge_result) => result_from_bridge(bridge_result) as u32,
-        Err(panic_info) => {
-            let msg = panic_info
-                .downcast_ref::<String>()
-                .map(|s| s.as_str())
-                .or_else(|| panic_info.downcast_ref::<&str>().copied())
-                .unwrap_or("unknown panic");
-            result_from_panic(msg) as u32
-        }
-    }
+    result_from_bridge(jsonschema_llm_core::rehydrate_json(
+        &data_str,
+        &codec_str,
+        &schema_str,
+    )) as u32
 }
