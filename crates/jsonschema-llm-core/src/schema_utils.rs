@@ -256,10 +256,10 @@ pub(crate) fn build_opaque_description(schema: &Value) -> String {
     let structure = describe_schema_structure(schema, 0);
     let constraints = collect_constraint_hints(schema);
     if constraints.is_empty() {
-        format!("A JSON-encoded string. Structure: {structure}. Produce valid, parseable JSON.")
+        format!("MUST be a valid JSON value serialized as a string. Structure: {structure}. Do NOT output plain text — the value must parse with JSON.parse().")
     } else {
         format!(
-            "A JSON-encoded string. Structure: {structure}. {constraints} Produce valid, parseable JSON."
+            "MUST be a valid JSON value serialized as a string. Structure: {structure}. {constraints} Do NOT output plain text — the value must parse with JSON.parse()."
         )
     }
 }

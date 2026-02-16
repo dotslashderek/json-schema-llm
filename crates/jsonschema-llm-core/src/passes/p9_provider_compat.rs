@@ -240,7 +240,7 @@ impl CompatVisitor<'_> {
 
             *schema = json!({
                 "type": "string",
-                "description": "A JSON-encoded string representing the object. Parse with JSON.parse() after generation."
+                "description": "MUST be a valid JSON object serialized as a string, e.g. \"{\\\"key\\\": \\\"value\\\"}\". Do NOT output plain text — the value must parse with JSON.parse()."
             });
             self.transforms.push(Transform::JsonStringParse {
                 path: path.to_string(),
@@ -342,7 +342,7 @@ impl CompatVisitor<'_> {
 
                     *schema = json!({
                         "type": "string",
-                        "description": "A JSON-encoded string representing the object. Parse with JSON.parse() after generation."
+                        "description": "MUST be a valid JSON object serialized as a string, e.g. \"{\\\"key\\\": \\\"value\\\"}\". Do NOT output plain text — the value must parse with JSON.parse()."
                     });
                     self.transforms.push(Transform::JsonStringParse {
                         path: path.to_string(),
