@@ -90,13 +90,15 @@ class Engine:
         # ABI version handshake (once per Engine lifetime)
         if not self._abi_verified:
             exports = instance.exports(store)
-            abi_fn = exports.get("jsl_abi_version")
-            if abi_fn is not None:
+            try:
+                abi_fn = exports["jsl_abi_version"]
                 version = abi_fn(store)
                 if version != EXPECTED_ABI_VERSION:
                     raise RuntimeError(
                         f"ABI version mismatch: binary={version}, expected={EXPECTED_ABI_VERSION}"
                     )
+            except KeyError:
+                pass  # Older binary without jsl_abi_version export
             self._abi_verified = True
 
         memory = instance.exports(store)["memory"]

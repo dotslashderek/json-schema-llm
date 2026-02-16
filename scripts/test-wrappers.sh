@@ -17,7 +17,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WASM_BINARY="$PROJECT_ROOT/target/wasm32-wasip1/release/jsonschema_llm_wasi.wasm"
 
 # --- Pre-flight checks ---
-if ! command -v docker compose &>/dev/null && ! command -v docker-compose &>/dev/null; then
+if ! docker compose version &>/dev/null && ! docker-compose version &>/dev/null; then
   echo "❌ docker compose not found. Install Docker Desktop or docker-compose."
   exit 1
 fi
