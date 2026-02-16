@@ -310,14 +310,16 @@ def test_convert_invalid_options_json(store, instance, memory):
 
 
 def test_convert_partial_options(store, instance, memory):
-    """Test: valid JSON options missing required 'target' field produce error."""
+    """Test: valid JSON options missing some fields use defaults (serde(default))."""
     schema = json.dumps({"type": "object", "properties": {"x": {"type": "string"}}})
-    partial_opts = json.dumps({"max_depth": 5})  # missing 'target'
+    partial_opts = json.dumps({"max_depth": 5})  # missing 'target' — uses default
     result = call_jsl(store, instance, memory, "jsl_convert", schema, partial_opts)
 
-    # Should produce a deserialization error from core, not crash
-    assert result["status"] == STATUS_ERROR, f"Expected ERROR, got {result['status']}"
-    print(f"  ✅ convert(partial options, missing target) → error code={result['payload'].get('code', 'N/A')}")
+    # With serde(default), missing fields use struct Default — should succeed
+    assert result["status"] == STATUS_OK, f"Expected OK, got {result['status']}: {result['payload']}"
+    payload = result["payload"]
+    assert payload["apiVersion"] == "1.0"
+    print(f"  ✅ convert(partial options) → uses defaults, apiVersion={payload['apiVersion']}")
 
 
 def test_convert_empty_schema(store, instance, memory):
