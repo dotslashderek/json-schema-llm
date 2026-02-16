@@ -1,0 +1,249 @@
+{
+  "description": "Cross-language conformance fixtures for jsonschema-llm WASI wrappers",
+  "version": "1.0",
+  "suites": {
+    "convert": {
+      "description": "Convert operation test cases",
+      "fixtures": [
+        {
+          "id": "convert_simple_object",
+          "description": "Simple object schema converts with expected keys",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "integer", "minimum": 0 }
+              },
+              "required": ["name", "age"]
+            },
+            "options": {}
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0",
+            "schema_has_properties": true,
+            "codec_has_schema_uri": true
+          }
+        },
+        {
+          "id": "convert_nested_object",
+          "description": "Nested object schema with arrays converts correctly",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "user": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "emails": { "type": "array", "items": { "type": "string" } }
+                  },
+                  "required": ["name"]
+                },
+                "role": { "type": "string", "enum": ["admin", "user", "guest"] }
+              },
+              "required": ["user", "role"]
+            },
+            "options": {}
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0"
+          }
+        },
+        {
+          "id": "convert_with_max_depth",
+          "description": "Non-default max-depth option is accepted",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "x": { "type": "string" }
+              }
+            },
+            "options": { "max-depth": 5 }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0"
+          }
+        },
+        {
+          "id": "convert_with_recursion_limit",
+          "description": "Non-default recursion-limit option is accepted",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "x": { "type": "string" }
+              }
+            },
+            "options": { "recursion-limit": 2 }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0"
+          }
+        },
+        {
+          "id": "convert_with_target",
+          "description": "Target provider option (openai-strict) is accepted",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "x": { "type": "string" }
+              }
+            },
+            "options": { "target": "openai-strict" }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0"
+          }
+        },
+        {
+          "id": "convert_provider_compat_errors",
+          "description": "Schema that triggers provider compat errors includes providerCompatErrors",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" }
+                }
+              }
+            },
+            "options": { "target": "openai-strict" }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0"
+          }
+        },
+        {
+          "id": "convert_error_invalid_json",
+          "description": "Invalid JSON input produces structured error",
+          "input": {
+            "schema_raw": "NOT VALID JSON",
+            "options": {}
+          },
+          "expected": {
+            "is_error": true,
+            "error_has_keys": ["code", "message"],
+            "error_code": "json_parse_error"
+          }
+        },
+        {
+          "id": "convert_empty_object",
+          "description": "Empty object schema converts successfully",
+          "input": {
+            "schema": { "type": "object" },
+            "options": {}
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "schema", "codec"],
+            "apiVersion": "1.0"
+          }
+        }
+      ]
+    },
+    "roundtrip": {
+      "description": "Convert + rehydrate roundtrip test cases",
+      "fixtures": [
+        {
+          "id": "roundtrip_simple",
+          "description": "Simple object roundtrips with data preservation",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "integer", "minimum": 0 }
+              },
+              "required": ["name", "age"]
+            },
+            "options": {},
+            "data": { "name": "Ada", "age": 36 }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "data"],
+            "apiVersion": "1.0",
+            "data": { "name": "Ada", "age": 36 },
+            "warnings_is_array": true
+          }
+        },
+        {
+          "id": "roundtrip_nested",
+          "description": "Nested objects with arrays roundtrip correctly",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "user": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "tags": { "type": "array", "items": { "type": "string" } }
+                  },
+                  "required": ["name"]
+                }
+              },
+              "required": ["user"]
+            },
+            "options": {},
+            "data": {
+              "user": { "name": "Ada", "tags": ["pioneer", "mathematician"] }
+            }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "data"],
+            "apiVersion": "1.0",
+            "data_user_name": "Ada",
+            "warnings_is_array": true
+          }
+        },
+        {
+          "id": "roundtrip_with_options",
+          "description": "Roundtrip works with non-default conversion options",
+          "input": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": { "type": "number" }
+              },
+              "required": ["value"]
+            },
+            "options": { "max-depth": 10 },
+            "data": { "value": 42.5 }
+          },
+          "expected": {
+            "has_keys": ["apiVersion", "data"],
+            "data_value": 42.5,
+            "warnings_is_array": true
+          }
+        }
+      ]
+    },
+    "rehydrate_error": {
+      "description": "Rehydrate error cases",
+      "fixtures": [
+        {
+          "id": "rehydrate_invalid_codec",
+          "description": "Invalid codec JSON produces structured error",
+          "input": {
+            "data": { "x": "hello" },
+            "codec_raw": "NOT VALID JSON",
+            "schema": { "type": "object" }
+          },
+          "expected": {
+            "is_error": true,
+            "error_has_keys": ["code", "message"]
+          }
+        }
+      ]
+    }
+  }
+}
