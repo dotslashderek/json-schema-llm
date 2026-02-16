@@ -231,12 +231,12 @@ jobs:
       - name: Install Python deps
         if: matrix.lang == 'python'
         run: pip install -r requirements.txt
-        working-directory: bindings/python-wasi
+        working-directory: bindings/python
 
       - name: Run Python WASI tests
         if: matrix.lang == 'python'
         run: python -m pytest -v test_wasi.py
-        working-directory: bindings/python-wasi
+        working-directory: bindings/python
 
       - name: Setup Node
         if: matrix.lang == 'ts'
@@ -253,12 +253,12 @@ jobs:
       - name: Install TS deps
         if: matrix.lang == 'ts'
         run: pnpm install --no-frozen-lockfile
-        working-directory: bindings/ts-wasi
+        working-directory: bindings/ts
 
       - name: Build and test TS wrapper
         if: matrix.lang == 'ts'
         run: pnpm run build && pnpm run test
-        working-directory: bindings/ts-wasi
+        working-directory: bindings/ts
 
       - name: Setup Java
         if: matrix.lang == 'java'
@@ -270,7 +270,7 @@ jobs:
       - name: Run Java wrapper tests
         if: matrix.lang == 'java'
         run: ./gradlew test
-        working-directory: bindings/java-wasi
+        working-directory: bindings/java
 
       - name: Setup Ruby
         if: matrix.lang == 'ruby'
