@@ -63,13 +63,36 @@ public class JsonSchemaLlmWasi implements AutoCloseable {
             .setPropertyNamingStrategy(
                     com.fasterxml.jackson.databind.PropertyNamingStrategies.KEBAB_CASE);
 
+    private String normalizeOptionsJson(Object options) throws com.fasterxml.jackson.core.JsonProcessingException {
+        if (options == null)
+            return "{}";
+        // Serialize to JsonNode, then recursively normalize keys
+        JsonNode node = MAPPER.valueToTree(options);
+        if (node.isObject()) {
+            node = normalizeKeys(node);
+        }
+        return MAPPER.writeValueAsString(node);
+    }
+
+    private JsonNode normalizeKeys(JsonNode node) {
+        if (!node.isObject())
+            return node;
+        com.fasterxml.jackson.databind.node.ObjectNode result = MAPPER.createObjectNode();
+        node.fields().forEachRemaining(entry -> {
+            // Convert camelCase/snake_case to kebab-case
+            String key = entry.getKey()
+                    .replaceAll("([a-z])([A-Z])", "$1-$2")
+                    .replace('_', '-')
+                    .toLowerCase();
+            result.set(key, normalizeKeys(entry.getValue()));
+        });
+        return result;
+    }
+
     public JsonNode convert(Object schema, Object options) throws JslException {
         try {
             String schemaJson = MAPPER.writeValueAsString(schema);
-            // Normalize camelCase/snake_case option keys to kebab-case for WASI binary
-            String optsJson = options != null
-                    ? KEBAB_MAPPER.writeValueAsString(options)
-                    : "{}";
+            String optsJson = normalizeOptionsJson(options);
             return callJsl("jsl_convert", schemaJson, optsJson);
         } catch (JslException e) {
             throw e;
@@ -116,8 +139,10 @@ public class JsonSchemaLlmWasi implements AutoCloseable {
                         throw new RuntimeException(
                                 "ABI version mismatch: binary=" + version + ", expected=" + EXPECTED_ABI_VERSION);
                     }
+                } catch (RuntimeException e) {
+                    throw e; // Propagate ABI mismatch and other runtime errors
                 } catch (Exception ignored) {
-                    // If export doesn't exist, skip version check
+                    // If export doesn't exist (e.g. older binary), skip version check
                 }
                 abiVerified = true;
             }

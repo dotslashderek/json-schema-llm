@@ -203,7 +203,13 @@ func (e *Engine) callJsl(funcName string, jsonArgs ...[]byte) ([]byte, error) {
 		abiFn := mod.ExportedFunction("jsl_abi_version")
 		if abiFn != nil {
 			results, err := abiFn.Call(e.ctx)
-			if err == nil && len(results) > 0 && results[0] != expectedABIVersion {
+			if err != nil {
+				return nil, fmt.Errorf("jsl_abi_version call failed: %w", err)
+			}
+			if len(results) != 1 {
+				return nil, fmt.Errorf("jsl_abi_version returned %d values, expected 1", len(results))
+			}
+			if results[0] != expectedABIVersion {
 				return nil, fmt.Errorf("ABI version mismatch: binary=%d, expected=%d", results[0], expectedABIVersion)
 			}
 		}

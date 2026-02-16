@@ -52,6 +52,7 @@ public sealed class JsonSchemaLlmEngine : IDisposable
     private static readonly JsonSerializerOptions KebabCaseOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.KebabCaseLower,
+        DictionaryKeyPolicy = JsonNamingPolicy.KebabCaseLower,
     };
 
     public JsonElement Convert(object schema, object? options = null)
