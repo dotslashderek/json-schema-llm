@@ -32,7 +32,7 @@ pub enum Mode {
 /// Fields are serialized in `kebab-case` (e.g., `max-depth`, `recursion-limit`).
 /// This naming convention is part of the public API contract for FFI and config files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", default)]
 pub struct ConvertOptions {
     /// Target provider. Default: OpenAI Strict.
     pub target: Target,
