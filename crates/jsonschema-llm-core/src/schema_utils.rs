@@ -239,6 +239,42 @@ where
 }
 
 // ---------------------------------------------------------------------------
+// JSON Pointer resolution (RFC 6901)
+// ---------------------------------------------------------------------------
+
+/// Resolve a JSON Pointer against a document root.
+///
+/// Supports paths like `#/$defs/Address`, `#/definitions/Thing`,
+/// `#/components/schemas/Pet`, `#/$defs/User/properties/name`, and bare `#`.
+///
+/// Returns `None` if the pointer cannot be resolved.
+pub(crate) fn resolve_pointer<'a>(root: &'a Value, pointer: &str) -> Option<&'a Value> {
+    let path = pointer.strip_prefix('#')?;
+    if path.is_empty() {
+        return Some(root);
+    }
+    let path = path.strip_prefix('/')?;
+
+    let mut current = root;
+    for segment in path.split('/') {
+        // Unescape RFC 6901 sequences.
+        let key = segment.replace("~1", "/").replace("~0", "~");
+        match current {
+            Value::Object(obj) => {
+                current = obj.get(&key)?;
+            }
+            Value::Array(arr) => {
+                let idx: usize = key.parse().ok()?;
+                current = arr.get(idx)?;
+            }
+            _ => return None,
+        }
+    }
+
+    Some(current)
+}
+
+// ---------------------------------------------------------------------------
 // Opaque string description helpers
 // ---------------------------------------------------------------------------
 
