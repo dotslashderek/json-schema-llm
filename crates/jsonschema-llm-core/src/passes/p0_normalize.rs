@@ -305,32 +305,9 @@ fn resolve_single_ref(
 }
 
 /// Resolve a JSON Pointer against a root document.
-/// Supports paths like `#/$defs/Address`, `#/definitions/Thing`,
-/// `#/$defs/User/properties/address`.
+/// Delegates to [`crate::schema_utils::resolve_pointer`].
 fn resolve_pointer<'a>(root: &'a Value, pointer: &str) -> Option<&'a Value> {
-    let path = pointer.strip_prefix('#')?;
-    if path.is_empty() {
-        return Some(root);
-    }
-    let path = path.strip_prefix('/')?;
-
-    let mut current = root;
-    for segment in path.split('/') {
-        // Unescape RFC 6901 sequences.
-        let key = segment.replace("~1", "/").replace("~0", "~");
-        match current {
-            Value::Object(obj) => {
-                current = obj.get(&key)?;
-            }
-            Value::Array(arr) => {
-                let idx: usize = key.parse().ok()?;
-                current = arr.get(idx)?;
-            }
-            _ => return None,
-        }
-    }
-
-    Some(current)
+    crate::schema_utils::resolve_pointer(root, pointer)
 }
 
 /// Recurse into all schema-bearing children of an object.
