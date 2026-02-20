@@ -100,24 +100,22 @@ pub fn extract_component(
     let target = target.clone();
 
     // Phase 2: Transitive closure — DFS to collect all reachable deps.
-    let max_depth = options.max_depth.unwrap_or(usize::MAX);
-    let mut visited: HashSet<String> = HashSet::new();
-    visited.insert(pointer.to_string());
+    let mut ctx = DfsCtx {
+        root_schema: schema,
+        max_depth: options.max_depth.unwrap_or(usize::MAX),
+        visited: HashSet::new(),
+        deps: BTreeMap::new(),
+        missing_refs: Vec::new(),
+    };
+    ctx.visited.insert(pointer.to_string());
 
-    // deps: pointer → (key, resolved_value). BTreeMap for deterministic output.
-    let mut deps: BTreeMap<String, (String, Value)> = BTreeMap::new();
-    let mut missing_refs: Vec<String> = Vec::new();
+    collect_deps(&target, pointer, 0, &mut ctx)?;
 
-    collect_deps(
-        &target,
-        schema,
-        pointer,
-        0,
-        max_depth,
-        &mut visited,
-        &mut deps,
-        &mut missing_refs,
-    )?;
+    let DfsCtx {
+        deps,
+        mut missing_refs,
+        ..
+    } = ctx;
 
     let dependency_count = deps.len();
 
@@ -161,6 +159,20 @@ pub fn extract_component(
 }
 
 // ---------------------------------------------------------------------------
+// DFS context
+// ---------------------------------------------------------------------------
+
+/// Mutable + readonly context threaded through the DFS traversal.
+struct DfsCtx<'a> {
+    root_schema: &'a Value,
+    max_depth: usize,
+    visited: HashSet<String>,
+    /// pointer → (key, resolved_value). `BTreeMap` for deterministic output.
+    deps: BTreeMap<String, (String, Value)>,
+    missing_refs: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
 // DFS transitive closure
 // ---------------------------------------------------------------------------
 
@@ -168,24 +180,20 @@ pub fn extract_component(
 ///
 /// For each `$ref` encountered:
 /// - External refs (not starting with `#`) → hard error
-/// - Already visited → skip (cycle break)
+/// - Anchor-style refs (`#Foo`) → hard error
+/// - Already visited → skip (cycle break), but still traverse siblings
 /// - Unresolvable local ref → record in `missing_refs`, leave as-is (soft-fail)
 /// - Resolvable → compute key, add to `deps`, recurse
-#[allow(clippy::too_many_arguments)]
 fn collect_deps(
     node: &Value,
-    root_schema: &Value,
     current_path: &str,
     depth: usize,
-    max_depth: usize,
-    visited: &mut HashSet<String>,
-    deps: &mut BTreeMap<String, (String, Value)>,
-    missing_refs: &mut Vec<String>,
+    ctx: &mut DfsCtx<'_>,
 ) -> Result<(), ConvertError> {
-    if depth > max_depth {
+    if depth > ctx.max_depth {
         return Err(ConvertError::RecursionDepthExceeded {
             path: current_path.to_string(),
-            max_depth,
+            max_depth: ctx.max_depth,
         });
     }
 
@@ -211,31 +219,23 @@ fn collect_deps(
                 }
 
                 // Skip if already visited (cycle break) — but still traverse siblings below.
-                let already_visited = visited.contains(ref_val);
+                let already_visited = ctx.visited.contains(ref_val);
 
                 if !already_visited {
                     // Attempt to resolve.
-                    match resolve_pointer(root_schema, ref_val) {
+                    match resolve_pointer(ctx.root_schema, ref_val) {
                         None => {
                             // Soft-fail: record as missing, leave $ref dangling.
-                            missing_refs.push(ref_val.to_string());
+                            ctx.missing_refs.push(ref_val.to_string());
                         }
                         Some(resolved) => {
-                            let key = pointer_to_key(ref_val, deps);
+                            let key = pointer_to_key(ref_val, &ctx.deps);
                             let resolved_clone = resolved.clone();
-                            visited.insert(ref_val.to_string());
-                            deps.insert(ref_val.to_string(), (key, resolved_clone.clone()));
+                            ctx.visited.insert(ref_val.to_string());
+                            ctx.deps
+                                .insert(ref_val.to_string(), (key, resolved_clone.clone()));
                             // Only increment depth for $ref hops (not AST traversal).
-                            collect_deps(
-                                &resolved_clone,
-                                root_schema,
-                                ref_val,
-                                depth + 1,
-                                max_depth,
-                                visited,
-                                deps,
-                                missing_refs,
-                            )?;
+                            collect_deps(&resolved_clone, ref_val, depth + 1, ctx)?;
                         }
                     }
                 }
@@ -248,16 +248,7 @@ fn collect_deps(
                     }
                     let child_path = format!("{}/{}", current_path, key);
                     // Do NOT increment depth here — sibling traversal is not a ref hop.
-                    collect_deps(
-                        val,
-                        root_schema,
-                        &child_path,
-                        depth,
-                        max_depth,
-                        visited,
-                        deps,
-                        missing_refs,
-                    )?;
+                    collect_deps(val, &child_path, depth, ctx)?;
                 }
                 return Ok(());
             }
@@ -265,32 +256,14 @@ fn collect_deps(
             // No $ref — recurse into all values (depth unchanged: not a ref hop).
             for (key, val) in obj {
                 let child_path = format!("{}/{}", current_path, key);
-                collect_deps(
-                    val,
-                    root_schema,
-                    &child_path,
-                    depth,
-                    max_depth,
-                    visited,
-                    deps,
-                    missing_refs,
-                )?;
+                collect_deps(val, &child_path, depth, ctx)?;
             }
         }
         Value::Array(arr) => {
             for (i, val) in arr.iter().enumerate() {
                 let child_path = format!("{}/{}", current_path, i);
                 // Depth unchanged: array traversal is not a ref hop.
-                collect_deps(
-                    val,
-                    root_schema,
-                    &child_path,
-                    depth,
-                    max_depth,
-                    visited,
-                    deps,
-                    missing_refs,
-                )?;
+                collect_deps(val, &child_path, depth, ctx)?;
             }
         }
         _ => {}
