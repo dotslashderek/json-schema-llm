@@ -1,0 +1,31 @@
+package {{ package_name }};
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import java.io.IOException;
+
+/**
+ * Facade for accessing all schema components.
+ *
+ * <p>Provides typed static methods to load each component's
+ * LLM-compatible schema and codec.
+ */
+public class SchemaGenerator {
+
+    private SchemaGenerator() {}
+{% for component in components %}
+    /**
+     * Load the "{{ component.component_name }}" schema.
+     */
+    public static JsonNode {{ component.component_name | replace(from="-", to="_") }}Schema() throws IOException {
+        return {{ component.class_name }}.schema();
+    }
+
+    /**
+     * Load the "{{ component.component_name }}" codec.
+     */
+    public static JsonNode {{ component.component_name | replace(from="-", to="_") }}Codec() throws IOException {
+        return {{ component.class_name }}.codec();
+    }
+{% endfor %}
+}

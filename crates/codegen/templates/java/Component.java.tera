@@ -1,0 +1,49 @@
+package {{ package_name }};
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+/**
+ * Schema wrapper for the "{{ component_name }}" component.
+ *
+ * <p>Provides access to the pre-converted LLM-compatible schema and codec
+ * for the {{ component_name }} component.
+ */
+public class {{ class_name }} {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private {{ class_name }}() {}
+
+    /**
+     * Load the LLM-compatible schema for {{ component_name }}.
+     *
+     * @return parsed JSON schema node
+     * @throws IOException if the schema resource cannot be read
+     */
+    public static JsonNode schema() throws IOException {
+        return loadResource("schemas/{{ schema_path }}");
+    }
+
+    /**
+     * Load the codec (rehydration map) for {{ component_name }}.
+     *
+     * @return parsed codec JSON node
+     * @throws IOException if the codec resource cannot be read
+     */
+    public static JsonNode codec() throws IOException {
+        return loadResource("schemas/{{ codec_path }}");
+    }
+
+    private static JsonNode loadResource(String path) throws IOException {
+        try (InputStream is = {{ class_name }}.class.getClassLoader().getResourceAsStream(path)) {
+            if (is == null) {
+                throw new IOException("Resource not found: " + path);
+            }
+            return MAPPER.readTree(is);
+        }
+    }
+}
