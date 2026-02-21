@@ -44,7 +44,7 @@ fi
 
 echo "⚙️  Generating fixtures..."
 STDERR_FILE=$(mktemp)
-"$CLI" convert "$SOURCE_SCHEMA" --output-dir "$OUTPUT_DIR" 2>"$STDERR_FILE" || true
+"$CLI" convert "$SOURCE_SCHEMA" --output-dir "$OUTPUT_DIR" 2>"$STDERR_FILE"
 
 # Check for component errors (report but don't fail — some recursive schemas are expected to error)
 if grep -q "Component error" "$STDERR_FILE"; then
@@ -70,6 +70,11 @@ while IFS= read -r -d '' file; do
     INVALID_FILES=$((INVALID_FILES + 1))
   fi
 done < <(find "$OUTPUT_DIR" -name "*.json" -print0)
+
+if [[ $TOTAL_FILES -eq 0 ]]; then
+  echo "ERROR: No JSON files generated"
+  exit 1
+fi
 
 if [[ $INVALID_FILES -gt 0 ]]; then
   echo "ERROR: $INVALID_FILES invalid JSON files found"

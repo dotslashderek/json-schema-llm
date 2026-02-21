@@ -171,11 +171,11 @@ Pre-built schema/codec pairs are available for the **OpenAPI 3.1** specification
 
 ```bash
 # Use a single OAS 3.1 component schema with your LLM
-cat fixtures/oas31/openai-strict/$defs/operation/schema.json
+cat 'fixtures/oas31/openai-strict/$defs/operation/schema.json'
 
 # Rehydrate LLM output back to the original OAS shape
 jsonschema-llm rehydrate llm-output.json \
-  --codec fixtures/oas31/openai-strict/$defs/operation/codec.json \
+  --codec 'fixtures/oas31/openai-strict/$defs/operation/codec.json' \
   --schema fixtures/oas31/source/oas31-schema.json
 ```
 
