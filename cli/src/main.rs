@@ -130,7 +130,7 @@ enum Commands {
         #[arg(short, long)]
         schema: PathBuf,
 
-        /// Java package name (e.g., "com.example.petstore")
+        /// Package name (Java: "com.example.petstore", Python: "my-sdk")
         #[arg(short, long)]
         package: String,
 
@@ -205,11 +205,13 @@ enum OutputFormat {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum SdkLanguage {
     Java,
+    Python,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum BuildToolArg {
     Maven,
+    Setuptools,
 }
 
 // ---------------------------------------------------------------------------
@@ -373,31 +375,55 @@ fn main() -> Result<()> {
             }
         }
         Commands::GenSdk {
-            language: _,
+            language,
             schema,
             package,
             output,
             git_init,
             build_tool,
         } => {
-            // Validate package name (only alphanumeric, underscore, dot)
-            if !package
-                .chars()
-                .all(|c| c.is_alphanumeric() || c == '.' || c == '_')
-            {
-                anyhow::bail!(
-                    "Invalid package name '{}': must contain only alphanumeric, dot, and underscore",
-                    package
-                );
+            // Language-aware package name validation
+            match language {
+                SdkLanguage::Java => {
+                    if !package
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '.' || c == '_')
+                    {
+                        anyhow::bail!(
+                            "Invalid Java package name '{}': must contain only alphanumeric, dot, and underscore",
+                            package
+                        );
+                    }
+                }
+                SdkLanguage::Python => {
+                    if !package
+                        .chars()
+                        .all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '.')
+                    {
+                        anyhow::bail!(
+                            "Invalid Python package name '{}': must contain only alphanumeric, hyphen, underscore, and dot",
+                            package
+                        );
+                    }
+                }
             }
 
-            // Derive artifact name from package (last segment)
-            let artifact_name = package
-                .trim_end_matches('.')
-                .rsplit('.')
-                .next()
-                .unwrap()
-                .to_string();
+            // Derive artifact name from package
+            let artifact_name = match language {
+                SdkLanguage::Java => package
+                    .trim_end_matches('.')
+                    .rsplit('.')
+                    .next()
+                    .unwrap()
+                    .to_string(),
+                SdkLanguage::Python => package.clone(),
+            };
+
+            // Resolve build tool: use explicit flag or language default
+            let resolved_build_tool = match (language, build_tool) {
+                (_, BuildToolArg::Maven) => jsonschema_llm_codegen::BuildTool::Maven,
+                (_, BuildToolArg::Setuptools) => jsonschema_llm_codegen::BuildTool::Setuptools,
+            };
 
             let config = jsonschema_llm_codegen::SdkConfig {
                 package,
@@ -405,9 +431,7 @@ fn main() -> Result<()> {
                 schema_dir: schema,
                 output_dir: output,
                 git_init,
-                build_tool: match build_tool {
-                    BuildToolArg::Maven => jsonschema_llm_codegen::BuildTool::Maven,
-                },
+                build_tool: resolved_build_tool,
             };
 
             jsonschema_llm_codegen::generate(&config).context("SDK generation failed")?;
