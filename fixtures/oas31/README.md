@@ -32,17 +32,17 @@ Use a component's schema directly with an LLM provider:
 
 ```bash
 # Get the converted schema for a single OAS component
-cat fixtures/oas31/openai-strict/$defs/schema/schema.json
+cat 'fixtures/oas31/openai-strict/$defs/schema/schema.json'
 
 # Use with OpenAI API (example)
-SCHEMA=$(cat fixtures/oas31/openai-strict/$defs/operation/schema.json)
+SCHEMA=$(cat 'fixtures/oas31/openai-strict/$defs/operation/schema.json')
 ```
 
 To rehydrate LLM output back to the original shape:
 
 ```bash
 jsonschema-llm rehydrate llm-output.json \
-  --codec fixtures/oas31/openai-strict/$defs/operation/codec.json \
+  --codec 'fixtures/oas31/openai-strict/$defs/operation/codec.json' \
   --schema fixtures/oas31/source/oas31-schema.json
 ```
 
