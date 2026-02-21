@@ -82,3 +82,4 @@ bindings/dotnet/**/obj/
 # Java WASI
 bindings/java-wasi/.gradle/
 bindings/java-wasi/build/
+engine/java/target/
