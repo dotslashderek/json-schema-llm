@@ -35,6 +35,10 @@ struct RefContext<'a> {
     /// reference the same definition (e.g., meta-schema defs with 10+ self-refs).
     resolved_cache: HashMap<String, Value>,
     recursive_refs: Vec<String>,
+    /// Anchor map: absolute URI string → JSON Pointer.
+    anchor_map: HashMap<String, String>,
+    /// Current base URI for $id scoping.
+    base_uri: url::Url,
 }
 
 /// Result of running the schema normalization pass.
@@ -85,12 +89,16 @@ pub fn normalize(
 
     // Phase 2: resolve $ref.
     let frozen_root = root.clone();
+    let anchor_map = crate::anchor_utils::build_anchor_map(&frozen_root, None)?;
+    let base_uri = crate::anchor_utils::default_base_uri();
     let mut ctx = RefContext {
         root: &frozen_root,
         config,
         visiting: HashSet::new(),
         resolved_cache: HashMap::new(),
         recursive_refs: Vec::new(),
+        anchor_map,
+        base_uri,
     };
     let result = resolve_refs(root, "#", 0, &mut ctx)?;
 
@@ -384,6 +392,13 @@ fn resolve_refs(
         other => return Ok(other),
     };
 
+    // Track $id for base URI scoping.
+    if let Some(id_val) = result.get("$id").and_then(Value::as_str).map(String::from) {
+        if let Ok(new_base) = ctx.base_uri.join(&id_val) {
+            ctx.base_uri = new_base;
+        }
+    }
+
     // Check for $ref.
     if let Some(ref_val) = result.get("$ref").and_then(Value::as_str).map(String::from) {
         return resolve_single_ref(&result, &ref_val, path, depth, ctx);
@@ -404,23 +419,28 @@ fn resolve_single_ref(
     depth: usize,
     ctx: &mut RefContext<'_>,
 ) -> Result<Value, ConvertError> {
-    // Only root-relative JSON Pointers ("#" or "#/...") are supported.
-    if !ref_str.starts_with('#') {
-        return Err(ConvertError::UnsupportedFeature {
-            path: path.to_string(),
-            feature: format!("non-local $ref: {}", ref_str),
-        });
-    }
+    // Resolve anchor-style or URI-style refs via the anchor map.
+    let effective_ref = if ref_str == "#" || ref_str.starts_with("#/") {
+        // Standard JSON Pointer — use as-is.
+        ref_str.to_string()
+    } else {
+        // Anchor-style or URI-style ref — resolve via anchor map.
+        match crate::anchor_utils::resolve_ref_via_anchor_map(
+            ref_str,
+            &ctx.base_uri,
+            &ctx.anchor_map,
+        ) {
+            Some(pointer) => pointer,
+            None => {
+                return Err(ConvertError::UnresolvableRef {
+                    path: path.to_string(),
+                    reference: ref_str.to_string(),
+                });
+            }
+        }
+    };
 
-    // Reject anchor-style fragment refs (e.g., "#Foo") — we only support
-    // JSON Pointer syntax. Without this check they'd fall through to
-    // `UnresolvableRef` with a confusing error message.
-    if ref_str != "#" && !ref_str.starts_with("#/") {
-        return Err(ConvertError::UnsupportedFeature {
-            path: path.to_string(),
-            feature: format!("$anchor / non-pointer fragment $ref: {}", ref_str),
-        });
-    }
+    let ref_str = effective_ref.as_str();
 
     // Check memoization cache — if we've already resolved this ref, reuse it.
     // This turns O(fan_out^depth) into O(unique_defs) for schemas with
@@ -1053,7 +1073,7 @@ mod tests {
         let err = run_err(input);
         let msg = err.to_string();
         assert!(
-            msg.contains("Unsupported") || msg.contains("external") || msg.contains("non-local"),
+            msg.contains("Unresolvable") || msg.contains("external") || msg.contains("non-local"),
             "Expected error about non-local $ref, got: {}",
             msg
         );
@@ -1255,14 +1275,14 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         match &err {
-            ConvertError::UnsupportedFeature { feature, .. } => {
+            ConvertError::UnresolvableRef { reference, .. } => {
                 assert!(
-                    feature.contains("non-pointer fragment"),
-                    "Expected non-pointer fragment error, got: {}",
-                    feature
+                    reference.contains("Foo"),
+                    "Expected reference containing 'Foo', got: {}",
+                    reference
                 );
             }
-            other => panic!("Expected UnsupportedFeature, got: {:?}", other),
+            other => panic!("Expected UnresolvableRef, got: {:?}", other),
         }
     }
 
@@ -1464,6 +1484,40 @@ mod tests {
         assert_eq!(
             output["properties"]["config"]["properties"]["definitions"]["type"], "array",
             "property named 'definitions' inside a resolved def must not be stripped"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // AC: $anchor resolution in normalize (#217)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_normalize_resolves_anchor_ref() {
+        // Schema where a property's $ref uses an anchor name.
+        let schema = json!({
+            "$defs": {
+                "step-object": {
+                    "$anchor": "stepId",
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" }
+                    }
+                }
+            },
+            "type": "object",
+            "properties": {
+                "step": { "$ref": "#stepId" }
+            }
+        });
+        let config = ConvertOptions::default();
+        let result = normalize(&schema, &config).expect("normalize should resolve $anchor refs");
+        // The $ref should be inlined: `step` should have `type: "object"`.
+        let step = &result.pass.schema["properties"]["step"];
+        assert_eq!(
+            step["type"],
+            "object",
+            "step should be resolved to the step-object definition; got: {}",
+            serde_json::to_string_pretty(step).unwrap()
         );
     }
 }
