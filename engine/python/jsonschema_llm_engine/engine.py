@@ -143,6 +143,7 @@ class LlmRoundtripEngine:
             import jsonschema.exceptions
 
             schema = json.loads(schema_json)
+            jsonschema.Draft202012Validator.check_schema(schema)
             validator = jsonschema.Draft202012Validator(schema)
             return [str(e.message) for e in validator.iter_errors(data)]
         except ImportError:
@@ -151,7 +152,8 @@ class LlmRoundtripEngine:
             jsonschema.exceptions.SchemaError,
             jsonschema.exceptions.UnknownType,
         ) as e:
-            return [f"Schema validation error: {e}"]
+            msg = e.message if hasattr(e, "message") else str(e)
+            return [f"Schema validation error: {msg}"]
 
     # ─── WASI Internals ─────────────────────────────────────────────────
 
