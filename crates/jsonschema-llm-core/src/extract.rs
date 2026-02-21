@@ -218,15 +218,8 @@ pub fn extract_component(
     })?;
     let target = target.clone();
 
-    // Phase 1b: Build anchor map for $anchor/$id resolution.
-    // Initialize base URI from root $id if present.
-    let default_base = crate::anchor_utils::default_base_uri();
-    let root_base = if let Some(id_val) = schema.get("$id").and_then(serde_json::Value::as_str) {
-        default_base.join(id_val).unwrap_or(default_base.clone())
-    } else {
-        default_base
-    };
-    let anchor_map = crate::anchor_utils::build_anchor_map(schema, Some(&root_base))?;
+    // Phase 1b: Build resolver engine for $anchor/$id resolution.
+    let resolver = crate::resolver::ResolverEngine::new(schema)?;
 
     // Phase 2: Transitive closure — DFS to collect all reachable deps.
     let mut ctx = DfsCtx {
@@ -235,8 +228,8 @@ pub fn extract_component(
         visited: HashSet::new(),
         deps: BTreeMap::new(),
         missing_refs: Vec::new(),
-        anchor_map: anchor_map.clone(),
-        base_uri: root_base,
+        resolver: &resolver,
+        base_uri: resolver.base_uri().clone(),
     };
     ctx.visited.insert(pointer.to_string());
 
@@ -265,7 +258,7 @@ pub fn extract_component(
     // Phase 3b: Also add anchor-ref → new-pointer entries to the rewrite map
     // so that anchor-style $refs (e.g., "#stepId") get rewritten in the output.
     let mut full_rewrite_map = rewrite_map.clone();
-    for (uri, pointer_path) in &anchor_map {
+    for (uri, pointer_path) in resolver.anchor_map() {
         if let Some(new_ref) = rewrite_map.get(pointer_path) {
             // Extract the fragment from the URI (e.g., "#stepId").
             if let Ok(parsed) = url::Url::parse(uri) {
@@ -320,8 +313,8 @@ struct DfsCtx<'a> {
     /// pointer → (key, resolved_value). `BTreeMap` for deterministic output.
     deps: BTreeMap<String, (String, Value)>,
     missing_refs: Vec<String>,
-    /// Anchor map: absolute URI string → JSON Pointer.
-    anchor_map: std::collections::HashMap<String, String>,
+    /// Centralized resolver engine for $ref resolution.
+    resolver: &'a crate::resolver::ResolverEngine,
     /// Current base URI for $id scoping during DFS.
     base_uri: url::Url,
 }
@@ -364,19 +357,17 @@ fn collect_deps(
             }
 
             if let Some(ref_val) = obj.get("$ref").and_then(Value::as_str) {
-                // Resolve via centralized anchor_utils::resolve_ref.
-                let effective_ref =
-                    match crate::anchor_utils::resolve_ref(ref_val, &ctx.base_uri, &ctx.anchor_map)
-                    {
-                        crate::anchor_utils::ResolvedRef::Pointer(p) => p,
-                        crate::anchor_utils::ResolvedRef::Unresolvable(_) => {
-                            // Soft-fail: external or unresolvable anchor refs are
-                            // recorded as missing and left as-is.
-                            ctx.missing_refs.push(ref_val.to_string());
-                            ctx.base_uri = saved_base;
-                            return Ok(());
-                        }
-                    };
+                // Resolve via centralized ResolverEngine.
+                let effective_ref = match ctx.resolver.resolve(ref_val, &ctx.base_uri) {
+                    crate::resolver::ResolvedRef::Pointer(p) => p,
+                    crate::resolver::ResolvedRef::Unresolvable(_) => {
+                        // Soft-fail: external or unresolvable anchor refs are
+                        // recorded as missing and left as-is.
+                        ctx.missing_refs.push(ref_val.to_string());
+                        ctx.base_uri = saved_base;
+                        return Ok(());
+                    }
+                };
 
                 let ref_val = effective_ref.as_str();
 
