@@ -22,6 +22,7 @@
 //! println!("Codec: {}", serde_json::to_string_pretty(&result.codec).unwrap());
 //! ```
 
+pub(crate) mod anchor_utils;
 pub mod codec;
 pub mod codec_warning;
 pub mod config;

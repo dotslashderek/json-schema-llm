@@ -4,6 +4,9 @@
 //! (RFC 6901), transitively resolving all reachable `$ref` dependencies and
 //! producing a self-contained sub-schema.
 //!
+//! Supports `$anchor`-style fragment references (e.g., `"#stepId"`) by
+//! building an anchor map via [`crate::anchor_utils::build_anchor_map`].
+//!
 //! ## Usage
 //!
 //! ```rust,no_run
@@ -215,6 +218,16 @@ pub fn extract_component(
     })?;
     let target = target.clone();
 
+    // Phase 1b: Build anchor map for $anchor/$id resolution.
+    // Initialize base URI from root $id if present.
+    let default_base = crate::anchor_utils::default_base_uri();
+    let root_base = if let Some(id_val) = schema.get("$id").and_then(serde_json::Value::as_str) {
+        url::Url::parse(id_val).unwrap_or(default_base.clone())
+    } else {
+        default_base
+    };
+    let anchor_map = crate::anchor_utils::build_anchor_map(schema, Some(&root_base))?;
+
     // Phase 2: Transitive closure — DFS to collect all reachable deps.
     let mut ctx = DfsCtx {
         root_schema: schema,
@@ -222,6 +235,8 @@ pub fn extract_component(
         visited: HashSet::new(),
         deps: BTreeMap::new(),
         missing_refs: Vec::new(),
+        anchor_map: anchor_map.clone(),
+        base_uri: root_base,
     };
     ctx.visited.insert(pointer.to_string());
 
@@ -247,14 +262,33 @@ pub fn extract_component(
         })
         .collect();
 
+    // Phase 3b: Also add anchor-ref → new-pointer entries to the rewrite map
+    // so that anchor-style $refs (e.g., "#stepId") get rewritten in the output.
+    let mut full_rewrite_map = rewrite_map.clone();
+    for (uri, pointer_path) in &anchor_map {
+        if let Some(new_ref) = rewrite_map.get(pointer_path) {
+            // Extract the fragment from the URI (e.g., "#stepId").
+            if let Ok(parsed) = url::Url::parse(uri) {
+                if let Some(fragment) = parsed.fragment() {
+                    let anchor_ref = format!("#{}", fragment);
+                    full_rewrite_map.insert(anchor_ref, new_ref.clone());
+                }
+            }
+            // Also add the full URI as a rewrite target for URI-style refs.
+            full_rewrite_map.insert(uri.clone(), new_ref.clone());
+            // And the relative form (e.g., "nested.json#foo").
+            // We compute this by stripping the base from the URI.
+        }
+    }
+
     // Phase 4: Rewrite refs in the target node and all dep nodes.
-    let mut root = rewrite_refs(target, &rewrite_map);
+    let mut root = rewrite_refs(target, &full_rewrite_map);
 
     // Phase 5: Assemble $defs if there are any deps.
     if !deps.is_empty() {
         let mut defs_map = Map::new();
         for (_ptr, (key, value)) in deps {
-            let rewritten = rewrite_refs(value, &rewrite_map);
+            let rewritten = rewrite_refs(value, &full_rewrite_map);
             defs_map.insert(key, rewritten);
         }
         if let Value::Object(ref mut obj) = root {
@@ -286,6 +320,10 @@ struct DfsCtx<'a> {
     /// pointer → (key, resolved_value). `BTreeMap` for deterministic output.
     deps: BTreeMap<String, (String, Value)>,
     missing_refs: Vec<String>,
+    /// Anchor map: absolute URI string → JSON Pointer.
+    anchor_map: std::collections::HashMap<String, String>,
+    /// Current base URI for $id scoping during DFS.
+    base_uri: url::Url,
 }
 
 // ---------------------------------------------------------------------------
@@ -316,23 +354,36 @@ fn collect_deps(
     match node {
         Value::Object(obj) => {
             // Check for $ref at this node.
-            if let Some(ref_val) = obj.get("$ref").and_then(Value::as_str) {
-                // Hard error on external refs.
-                if !ref_val.starts_with('#') {
-                    return Err(ConvertError::UnsupportedFeature {
-                        path: current_path.to_string(),
-                        feature: format!("external $ref: {}", ref_val),
-                    });
+            // Track $id for base URI scoping.
+            if let Some(id_val) = obj.get("$id").and_then(Value::as_str) {
+                if let Ok(new_base) = ctx.base_uri.join(id_val) {
+                    ctx.base_uri = new_base;
                 }
+            }
 
-                // Reject anchor-style fragment refs (e.g., "#Foo") — only JSON Pointer
-                // syntax is supported (matches p0_normalize policy).
-                if ref_val != "#" && !ref_val.starts_with("#/") {
-                    return Err(ConvertError::UnsupportedFeature {
-                        path: current_path.to_string(),
-                        feature: format!("$anchor / non-pointer fragment $ref: {}", ref_val),
-                    });
-                }
+            if let Some(ref_val) = obj.get("$ref").and_then(Value::as_str) {
+                // Try to resolve anchor-style or URI-style refs via the anchor map.
+                let effective_ref = if ref_val == "#" || ref_val.starts_with("#/") {
+                    // Standard JSON Pointer — use as-is.
+                    ref_val.to_string()
+                } else {
+                    // Anchor-style or URI-style ref — resolve via anchor map.
+                    match crate::anchor_utils::resolve_ref_via_anchor_map(
+                        ref_val,
+                        &ctx.base_uri,
+                        &ctx.anchor_map,
+                    ) {
+                        Some(pointer) => pointer,
+                        None => {
+                            return Err(ConvertError::UnresolvableRef {
+                                path: current_path.to_string(),
+                                reference: ref_val.to_string(),
+                            });
+                        }
+                    }
+                };
+
+                let ref_val = effective_ref.as_str();
 
                 // Skip if already visited (cycle break) — but still traverse siblings below.
                 let already_visited = ctx.visited.contains(ref_val);
@@ -647,10 +698,10 @@ mod tests {
 
         let err = extract_component(&schema, "#/$defs/Pet", &opts()).unwrap_err();
         match err {
-            ConvertError::UnsupportedFeature { feature, .. } => {
-                assert!(feature.contains("external $ref"), "got: {}", feature);
+            ConvertError::UnresolvableRef { reference, .. } => {
+                assert!(reference.contains("example.com"), "got: {}", reference);
             }
-            other => panic!("expected UnsupportedFeature, got: {:?}", other),
+            other => panic!("expected UnresolvableRef, got: {:?}", other),
         }
     }
 
@@ -1110,5 +1161,71 @@ mod tests {
             defs.keys().collect::<Vec<_>>()
         );
         assert!(result.missing_refs.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // AC: $anchor resolution in extract_component (#217)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_extract_resolves_anchor_ref() {
+        // Schema where a property references another def via $anchor.
+        let schema = json!({
+            "$defs": {
+                "step-object": {
+                    "$anchor": "stepId",
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" }
+                    }
+                },
+                "workflow-object": {
+                    "type": "object",
+                    "properties": {
+                        "step": { "$ref": "#stepId" }
+                    }
+                }
+            }
+        });
+        let result = extract_component(&schema, "#/$defs/workflow-object", &opts())
+            .expect("extract_component should resolve $anchor refs");
+        // step-object should be pulled in as a dependency.
+        assert_eq!(
+            result.dependency_count, 1,
+            "step-object should be a dependency"
+        );
+        // The $ref should be rewritten to point to the new $defs location.
+        let step_ref = result.schema["properties"]["step"]["$ref"]
+            .as_str()
+            .expect("step.$ref should exist");
+        assert!(
+            step_ref.starts_with("#/$defs/"),
+            "step.$ref should be rewritten to #/$defs/...; got: {}",
+            step_ref
+        );
+    }
+
+    #[test]
+    fn test_extract_anchor_ref_with_id_scoping() {
+        // Schema where $id changes the base URI and $anchor is scoped.
+        let schema = json!({
+            "$id": "https://example.com/root.json",
+            "$defs": {
+                "nested": {
+                    "$id": "nested.json",
+                    "$anchor": "foo",
+                    "type": "string"
+                },
+                "consumer": {
+                    "type": "object",
+                    "properties": {
+                        "val": { "$ref": "nested.json#foo" }
+                    }
+                }
+            }
+        });
+        let result = extract_component(&schema, "#/$defs/consumer", &opts())
+            .expect("extract_component should resolve $id-scoped $anchor refs");
+        assert_eq!(result.dependency_count, 1);
     }
 }
