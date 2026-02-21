@@ -22,11 +22,11 @@ Fixtures generated with `--target openai-strict` (default, most restrictive). Co
 | `$defs/<Component>/schema.json` | Per-component converted schema             |
 | `$defs/<Component>/codec.json`  | Per-component rehydration codec            |
 
-**9 components** extracted, including: `criterion-object`, `info`, `parameter-object`, `request-body-object`, `source-description-object`, `reusable-object`, `specification-extensions`, and more.
+**12 components** extracted, including: `criterion-object`, `failure-action-object`, `info`, `parameter-object`, `request-body-object`, `source-description-object`, `step-object`, `success-action-object`, `reusable-object`, `specification-extensions`, and more.
 
-> **Note**: 6 components are excluded due to unsupported features:
+> **Note**: 3 components are excluded due to unsupported features:
 >
-> - `components-object`, `failure-action-object`, `step-object`, `success-action-object`, `workflow-object` — use `$anchor` fragment refs (`#stepId`, `#workflowId`)
+> - `components-object`, `workflow-object` — transitively depend on `schema` which uses an external meta-schema `$ref` (`https://json-schema.org/draft/2020-12/schema`)
 > - `schema` — external meta-schema `$ref` (`https://json-schema.org/draft/2020-12/schema`)
 
 ## Usage

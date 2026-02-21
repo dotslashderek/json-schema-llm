@@ -35,8 +35,7 @@ const DEFAULT_BASE: &str = "file:///schema.json";
 ///
 /// ## Errors
 ///
-/// Returns `ConvertError::SchemaError` if duplicate anchors are detected
-/// within the same base URI scope.
+/// Returns `ConvertError::SchemaError` for malformed schemas.
 pub(crate) fn build_anchor_map(
     schema: &Value,
     base_uri: Option<&Url>,
@@ -104,16 +103,10 @@ fn scan_anchors(
         let fragment = format!("#{}", anchor_val);
         if let Ok(absolute_uri) = scoped_base.join(&fragment) {
             let uri_str = absolute_uri.to_string();
-            if map.contains_key(&uri_str) {
-                return Err(ConvertError::SchemaError {
-                    path: pointer.to_string(),
-                    message: format!(
-                        "duplicate $anchor '{}' resolves to URI '{}'",
-                        anchor_val, uri_str
-                    ),
-                });
-            }
-            map.insert(uri_str, pointer.to_string());
+            // First-wins: extracted schemas may contain the same $anchor at
+            // multiple structural paths (root property + $defs copy). Only
+            // the first occurrence is registered.
+            map.entry(uri_str).or_insert_with(|| pointer.to_string());
         }
     }
 
@@ -187,20 +180,20 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_anchor_returns_error() {
+    fn test_duplicate_anchor_uses_first_wins() {
         let schema = json!({
             "$defs": {
                 "A": { "$anchor": "dup", "type": "string" },
                 "B": { "$anchor": "dup", "type": "integer" }
             }
         });
-        let result = build_anchor_map(&schema, None);
-        assert!(result.is_err(), "duplicate anchors should fail");
-        let err = result.unwrap_err();
+        let map = build_anchor_map(&schema, None).unwrap();
+        // First-wins: whichever is visited first gets the slot.
+        let val = &map["file:///schema.json#dup"];
         assert!(
-            err.to_string().contains("duplicate $anchor"),
-            "error message should mention duplicate: {}",
-            err
+            val == "#/$defs/A" || val == "#/$defs/B",
+            "expected either A or B, got: {}",
+            val
         );
     }
 
