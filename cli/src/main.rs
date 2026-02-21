@@ -119,6 +119,33 @@ enum Commands {
         /// Input JSON Schema file
         input: PathBuf,
     },
+
+    /// Generate a typed SDK project from converted schemas
+    GenSdk {
+        /// Target language for the generated SDK
+        #[arg(short, long, value_enum)]
+        language: SdkLanguage,
+
+        /// Directory containing manifest.json and component schemas (output of `convert --output-dir`)
+        #[arg(short, long)]
+        schema: PathBuf,
+
+        /// Java package name (e.g., "com.example.petstore")
+        #[arg(short, long)]
+        package: String,
+
+        /// Output directory for the generated SDK project
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Initialize a git repository in the generated project
+        #[arg(long, default_value_t = false)]
+        git_init: bool,
+
+        /// Build tool for the generated project
+        #[arg(long, value_enum, default_value_t = BuildToolArg::Maven)]
+        build_tool: BuildToolArg,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -173,6 +200,16 @@ impl From<PolymorphismArg> for PolymorphismStrategy {
 enum OutputFormat {
     Pretty,
     Compact,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum SdkLanguage {
+    Java,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum BuildToolArg {
+    Maven,
 }
 
 // ---------------------------------------------------------------------------
@@ -334,6 +371,35 @@ fn main() -> Result<()> {
             for pointer in &components {
                 println!("{}", pointer);
             }
+        }
+        Commands::GenSdk {
+            language: _,
+            schema,
+            package,
+            output,
+            git_init,
+            build_tool,
+        } => {
+            // Derive artifact name from package (last segment)
+            let artifact_name = package.rsplit('.').next().unwrap_or(&package).to_string();
+
+            let config = jsonschema_llm_codegen::SdkConfig {
+                package,
+                artifact_name,
+                schema_dir: schema,
+                output_dir: output,
+                git_init,
+                build_tool: match build_tool {
+                    BuildToolArg::Maven => jsonschema_llm_codegen::BuildTool::Maven,
+                },
+            };
+
+            jsonschema_llm_codegen::generate(&config).context("SDK generation failed")?;
+
+            eprintln!(
+                "SDK generated successfully at: {}",
+                config.output_dir.display()
+            );
         }
     }
 

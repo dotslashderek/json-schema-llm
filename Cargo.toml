@@ -3,6 +3,7 @@ members = [
     "crates/jsonschema-llm-core",
     "crates/jsonschema-llm-wasi",
     "crates/jsonschema-llm-wasm",
+    "crates/codegen",
     "cli",
 ]
 # WASI crate requires wasm32-wasip1 target — build explicitly via:
@@ -10,6 +11,7 @@ members = [
 default-members = [
     "crates/jsonschema-llm-core",
     "crates/jsonschema-llm-wasm",
+    "crates/codegen",
     "cli",
 ]
 resolver = "2"
