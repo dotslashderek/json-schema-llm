@@ -1,0 +1,22 @@
+"""{{ module_name }} component — pre-converted schema and codec."""
+
+from __future__ import annotations
+
+import json
+from importlib.resources import files as importlib_files
+from typing import Any
+
+
+def schema() -> Any:
+    """Load the LLM-compatible schema for {{ component_name }}."""
+    return _load_resource("schemas/{{ schema_path }}")
+
+
+def codec() -> Any:
+    """Load the codec (rehydration map) for {{ component_name }}."""
+    return _load_resource("schemas/{{ codec_path }}")
+
+
+def _load_resource(path: str) -> Any:
+    ref = importlib_files("{{ package_name }}").joinpath(path)
+    return json.loads(ref.read_text(encoding="utf-8"))

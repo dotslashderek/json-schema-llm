@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{{ package_name }}"
+version = "1.0.0"
+description = "Generated SDK for LLM-powered structured output"
+requires-python = ">=3.10"
+dependencies = [
+    "jsonschema-llm-engine>=0.1.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["{{ import_name }}*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json"]

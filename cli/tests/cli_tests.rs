@@ -434,3 +434,94 @@ fn test_help_shows_new_subcommands() {
         .stdout(predicate::str::contains("extract"))
         .stdout(predicate::str::contains("list-components"));
 }
+
+// ── #186: gen-sdk Python support ────────────────────────────────────────────
+
+fn setup_gen_sdk_fixtures(dir: &TempDir) -> std::path::PathBuf {
+    let schema_dir = dir.path().join("converted");
+    fs::create_dir_all(&schema_dir).unwrap();
+
+    let manifest = serde_json::json!({
+        "version": "1",
+        "generatedAt": "2026-01-01T00:00:00Z",
+        "sourceSchema": "test.json",
+        "target": "openai-strict",
+        "mode": "strict",
+        "components": [
+            {
+                "name": "user-profile",
+                "pointer": "#/$defs/user-profile",
+                "schemaPath": "user-profile/schema.json",
+                "codecPath": "user-profile/codec.json",
+                "dependencyCount": 0
+            }
+        ]
+    });
+    fs::write(
+        schema_dir.join("manifest.json"),
+        serde_json::to_string_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
+
+    let comp_dir = schema_dir.join("user-profile");
+    fs::create_dir_all(&comp_dir).unwrap();
+    fs::write(comp_dir.join("schema.json"), "{}").unwrap();
+    fs::write(comp_dir.join("codec.json"), "{}").unwrap();
+
+    schema_dir
+}
+
+#[test]
+fn test_gen_sdk_python_produces_valid_project() {
+    let dir = TempDir::new().unwrap();
+    let schema_dir = setup_gen_sdk_fixtures(&dir);
+    let output = dir.path().join("my-sdk");
+
+    cmd()
+        .args(["gen-sdk", "--language", "python"])
+        .args(["--schema", schema_dir.to_str().unwrap()])
+        .args(["--package", "my-test-sdk"])
+        .args(["--output", output.to_str().unwrap()])
+        .args(["--build-tool", "setuptools"])
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("SDK generated successfully"));
+
+    assert!(output.join("pyproject.toml").exists());
+    assert!(output.join("README.md").exists());
+    assert!(output.join(".gitignore").exists());
+    // snake_case import name directory
+    assert!(output.join("my_test_sdk/__init__.py").exists());
+    assert!(output.join("my_test_sdk/user_profile.py").exists());
+    assert!(output.join("my_test_sdk/generator.py").exists());
+    // Schema resources inside package
+    assert!(output
+        .join("my_test_sdk/schemas/user-profile/schema.json")
+        .exists());
+}
+
+#[test]
+fn test_gen_sdk_python_rejects_invalid_package() {
+    let dir = TempDir::new().unwrap();
+    let schema_dir = setup_gen_sdk_fixtures(&dir);
+
+    cmd()
+        .args(["gen-sdk", "--language", "python"])
+        .args(["--schema", schema_dir.to_str().unwrap()])
+        .args(["--package", "my sdk!"])
+        .args(["--output", dir.path().join("out").to_str().unwrap()])
+        .args(["--build-tool", "setuptools"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Invalid Python package name"));
+}
+
+#[test]
+fn test_gen_sdk_help_shows_python() {
+    cmd()
+        .args(["gen-sdk", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("python"))
+        .stdout(predicate::str::contains("setuptools"));
+}

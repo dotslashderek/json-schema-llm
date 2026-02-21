@@ -1,0 +1,36 @@
+"""Facade for accessing all schema components."""
+
+from __future__ import annotations
+
+from typing import Any
+{% for component in components %}
+from {{ package_name }}.{{ component.module_name }} import (
+    codec as {{ component.module_name }}_codec,
+    schema as {{ component.module_name }}_schema,
+)
+{% endfor %}
+
+__all__ = [
+{% for component in components %}
+    "{{ component.module_name }}_schema",
+    "{{ component.module_name }}_codec",
+{% endfor %}
+]
+
+
+def load_all_schemas() -> dict[str, Any]:
+    """Load all component schemas as a name→schema mapping."""
+    return {
+{% for component in components %}
+        "{{ component.component_name }}": {{ component.module_name }}_schema(),
+{% endfor %}
+    }
+
+
+def load_all_codecs() -> dict[str, Any]:
+    """Load all component codecs as a name→codec mapping."""
+    return {
+{% for component in components %}
+        "{{ component.component_name }}": {{ component.module_name }}_codec(),
+{% endfor %}
+    }

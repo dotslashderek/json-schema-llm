@@ -1,4 +1,5 @@
 pub mod java;
+pub mod python;
 
 use std::path::PathBuf;
 
@@ -9,12 +10,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BuildTool {
     Maven,
+    Setuptools,
 }
 
 impl std::fmt::Display for BuildTool {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             BuildTool::Maven => write!(f, "maven"),
+            BuildTool::Setuptools => write!(f, "setuptools"),
         }
     }
 }
@@ -63,5 +66,6 @@ pub struct Manifest {
 pub fn generate(config: &SdkConfig) -> Result<()> {
     match config.build_tool {
         BuildTool::Maven => java::generate(config),
+        BuildTool::Setuptools => python::generate(config),
     }
 }
