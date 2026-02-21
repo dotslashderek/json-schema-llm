@@ -35,8 +35,8 @@ struct RefContext<'a> {
     /// reference the same definition (e.g., meta-schema defs with 10+ self-refs).
     resolved_cache: HashMap<String, Value>,
     recursive_refs: Vec<String>,
-    /// Anchor map: absolute URI string → JSON Pointer.
-    anchor_map: HashMap<String, String>,
+    /// Centralized resolver engine for $ref resolution.
+    resolver: &'a crate::resolver::ResolverEngine,
     /// Current base URI for $id scoping.
     base_uri: url::Url,
 }
@@ -89,21 +89,15 @@ pub fn normalize(
 
     // Phase 2: resolve $ref.
     let frozen_root = root.clone();
-    let anchor_map = crate::anchor_utils::build_anchor_map(&frozen_root, None)?;
-    let default_base = crate::anchor_utils::default_base_uri();
-    let base_uri = if let Some(id_val) = frozen_root.get("$id").and_then(Value::as_str) {
-        default_base.join(id_val).unwrap_or(default_base)
-    } else {
-        default_base
-    };
+    let resolver = crate::resolver::ResolverEngine::new(&frozen_root)?;
     let mut ctx = RefContext {
         root: &frozen_root,
         config,
         visiting: HashSet::new(),
         resolved_cache: HashMap::new(),
         recursive_refs: Vec::new(),
-        anchor_map,
-        base_uri,
+        resolver: &resolver,
+        base_uri: resolver.base_uri().clone(),
     };
     let result = resolve_refs(root, "#", 0, &mut ctx)?;
 
@@ -430,15 +424,14 @@ fn resolve_single_ref(
     depth: usize,
     ctx: &mut RefContext<'_>,
 ) -> Result<Value, ConvertError> {
-    // Resolve via centralized anchor_utils::resolve_ref.
-    let effective_ref =
-        match crate::anchor_utils::resolve_ref(ref_str, &ctx.base_uri, &ctx.anchor_map) {
-            crate::anchor_utils::ResolvedRef::Pointer(p) => p,
-            crate::anchor_utils::ResolvedRef::Unresolvable(_) => {
-                // Unresolvable anchor or external ref — leave as-is.
-                return Ok(Value::Object(obj.clone()));
-            }
-        };
+    // Resolve via centralized ResolverEngine.
+    let effective_ref = match ctx.resolver.resolve(ref_str, &ctx.base_uri) {
+        crate::resolver::ResolvedRef::Pointer(p) => p,
+        crate::resolver::ResolvedRef::Unresolvable(_) => {
+            // Unresolvable anchor or external ref — leave as-is.
+            return Ok(Value::Object(obj.clone()));
+        }
+    };
 
     let ref_str = effective_ref.as_str();
 

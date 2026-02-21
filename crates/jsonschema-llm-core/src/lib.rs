@@ -30,6 +30,7 @@ pub mod error;
 pub mod extract;
 pub(crate) mod passes;
 pub mod rehydrator;
+pub(crate) mod resolver;
 pub(crate) mod schema_utils;
 pub(crate) mod schema_walker;
 
