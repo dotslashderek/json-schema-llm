@@ -4,8 +4,8 @@
 # wasm-pack outputs (pkg-nodejs + pkg-web).
 #
 # Usage:   bash scripts/assemble-npm.sh
-# Expects: crates/jsonschema-llm-wasm/pkg-nodejs/
-#          crates/jsonschema-llm-wasm/pkg-web/
+# Expects: crates/json-schema-llm-wasm/pkg-nodejs/
+#          crates/json-schema-llm-wasm/pkg-web/
 # Produces: dist/  (ready for `npm publish`)
 # -------------------------------------------------------------------
 set -euo pipefail
@@ -28,13 +28,13 @@ cp "${WASM_CRATE}/pkg-web/json_schema_llm_wasm.d.ts"     "${DIST}/web/"
 # 3. Patch package.json with jq
 TEMP_PKG=$(mktemp)
 jq '
-  .name = "jsonschema-llm" |
+  .name = "json-schema-llm" |
   .description = "Convert JSON Schema to LLM-compatible structured output schemas (WASM)" |
   .license = "Apache-2.0" |
   .repository = {
     "type": "git",
-    "url": "https://github.com/dotslashderek/jsonschema-llm.git",
-    "directory": "crates/jsonschema-llm-wasm"
+    "url": "https://github.com/dotslashderek/json-schema-llm.git",
+    "directory": "crates/json-schema-llm-wasm"
   } |
   .keywords = ["json-schema", "llm", "openai", "gemini", "claude", "wasm", "structured-output"] |
   .files = [
