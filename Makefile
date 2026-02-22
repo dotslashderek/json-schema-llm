@@ -59,14 +59,14 @@ test-wasi-host: build-wasi
 	@command -v python3 > /dev/null || \
 		(echo "❌ python3 not found. Install Python 3.12+." && exit 1)
 	@python3 -c "import wasmtime" 2>/dev/null || \
-		(echo "⚠️  wasmtime package not found. Installing..." && pip install wasmtime)
+		(echo "⚠️  wasmtime package not found. Installing..." && python3 -m pip install wasmtime)
 	python3 tests/wasi/host_verify.py
 	@echo "✅ WASI host verification passed"
 
 ## Run Docker-based polyglot wrapper tests (all 6 languages)
 test-wrappers: build-wasi
 	@echo "🧪 Running Docker wrapper tests..."
-	@docker compose version > /dev/null 2>&1 || \
+	@(docker compose version > /dev/null 2>&1 || docker-compose version > /dev/null 2>&1) || \
 		(echo "❌ docker compose not found. Install Docker Desktop." && exit 1)
 	./scripts/test-wrappers.sh
 	@echo "✅ Docker wrapper tests passed"
