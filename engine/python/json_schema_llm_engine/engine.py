@@ -284,5 +284,7 @@ def _resolve_wasm_bytes(explicit: str | None) -> bytes:
         return repo_path.read_bytes()
 
     raise FileNotFoundError(
-        "WASM binary not found. Install json-schema-llm-engine[wasm] or set JSON_SCHEMA_LLM_WASM_PATH."
+        "WASM binary not found. Set JSON_SCHEMA_LLM_WASM_PATH, "
+        "place the binary in json_schema_llm_engine/wasm/, "
+        "or build the WASI target (make build-wasi)."
     )
