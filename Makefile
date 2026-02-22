@@ -12,7 +12,7 @@
 #   - Python 3 with pip
 #   - Docker (for wrapper tests)
 
-.PHONY: verify-bindings verify-all build-wasi test-wasm-smoke test-wasi-host \
+.PHONY: verify-bindings verify-all build-wasi copy-wasm-python test-wasm-smoke test-wasi-host \
         test-wrappers test-engines test-rust check help
 
 # ---------------------------------------------------------------------------
@@ -40,6 +40,14 @@ build-wasi:
 		(echo "❌ wasm32-wasip1 target not installed. Run: rustup target add wasm32-wasip1" && exit 1)
 	cargo build --target wasm32-wasip1 --release -p json-schema-llm-wasi
 	@echo "✅ WASI binary built: target/wasm32-wasip1/release/json_schema_llm_wasi.wasm"
+
+## Copy WASM binary into Python engine package for pip install bundling
+copy-wasm-python: build-wasi
+	@echo "📦 Copying WASM binary into Python engine package..."
+	@mkdir -p engine/python/json_schema_llm_engine/wasm
+	cp target/wasm32-wasip1/release/json_schema_llm_wasi.wasm \
+		engine/python/json_schema_llm_engine/wasm/json_schema_llm_wasi.wasm
+	@echo "✅ WASM binary copied to engine/python/json_schema_llm_engine/wasm/"
 
 # ---------------------------------------------------------------------------
 # Test targets
