@@ -1,4 +1,4 @@
-"""Core types for the jsonschema-llm Python engine."""
+"""Core types for the json-schema-llm Python engine."""
 
 from __future__ import annotations
 

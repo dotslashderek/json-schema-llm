@@ -1,4 +1,4 @@
-"""Run stress tests for jsonschema-llm CLI.
+"""Run stress tests for json-schema-llm CLI.
 
 Orchestrates the full pipeline: convert → OpenAI → rehydrate → validate.
 Results include per-stage classification with machine-readable reason codes.
@@ -425,9 +425,9 @@ def classify_result(result, expected_failures):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run stress tests for jsonschema-llm CLI"
+        description="Run stress tests for json-schema-llm CLI"
     )
-    parser.add_argument("--bin", required=True, help="Path to jsonschema-llm binary")
+    parser.add_argument("--bin", required=True, help="Path to json-schema-llm binary")
     parser.add_argument(
         "--schemas", required=True, help="Directory containing input schemas"
     )

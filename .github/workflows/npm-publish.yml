@@ -36,10 +36,10 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Build WASM (nodejs)
-        run: wasm-pack build crates/jsonschema-llm-wasm --target nodejs --out-dir pkg-nodejs
+        run: wasm-pack build crates/json-schema-llm-wasm --target nodejs --out-dir pkg-nodejs
 
       - name: Build WASM (web)
-        run: wasm-pack build crates/jsonschema-llm-wasm --target web --out-dir pkg-web
+        run: wasm-pack build crates/json-schema-llm-wasm --target web --out-dir pkg-web
 
       - name: Assemble npm package
         run: bash scripts/assemble-npm.sh

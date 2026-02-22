@@ -1,6 +1,6 @@
 # JSON Schema Compatibility Matrix (Alpha)
 
-This document tracks the support status of JSON Schema features in `jsonschema-llm`. The library targets **JSON Schema Draft 2020-12**.
+This document tracks the support status of JSON Schema features in `json-schema-llm`. The library targets **JSON Schema Draft 2020-12**.
 
 **Status Legend:**
 

@@ -1,4 +1,4 @@
-"""Tests for the WASI-backed jsonschema-llm wrapper."""
+"""Tests for the WASI-backed json-schema-llm wrapper."""
 
 import json
 import pytest

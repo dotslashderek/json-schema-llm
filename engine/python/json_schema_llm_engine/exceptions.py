@@ -1,4 +1,4 @@
-"""Exception hierarchy for the jsonschema-llm Python engine."""
+"""Exception hierarchy for the json-schema-llm Python engine."""
 
 
 class EngineError(RuntimeError):

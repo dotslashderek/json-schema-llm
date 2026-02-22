@@ -33,7 +33,7 @@ class LlmRoundtripEngine:
     A fresh Store + Instance is created per call (WASI modules are single-use).
 
     Args:
-        wasm_path: Path to the jsonschema-llm WASI binary. If None, uses
+        wasm_path: Path to the json-schema-llm WASI binary. If None, uses
                    the JSONSCHEMA_LLM_WASM_PATH environment variable or
                    falls back to importlib.resources.
     """
