@@ -1,3 +1,3 @@
-# jsonschema-llm-wasi
+# json-schema-llm-wasi
 
-Python WASI wrapper for jsonschema-llm.
+Python WASI wrapper for json-schema-llm.

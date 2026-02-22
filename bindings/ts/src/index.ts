@@ -1,5 +1,5 @@
 /**
- * WASI-backed wrapper for jsonschema-llm.
+ * WASI-backed wrapper for json-schema-llm.
  *
  * Uses Node.js built-in WASI support to load the universal WASI binary
  * and exposes convert() and rehydrate() as TypeScript functions.

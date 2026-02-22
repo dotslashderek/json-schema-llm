@@ -46,8 +46,8 @@ You're left hand-converting schemas, losing information, and writing custom pars
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌─────────┐     ┌──────────────┐     ┌──────────────┐
-│ Your Schema  │────▶│ jsonschema-  │────▶│  LLM    │────▶│  Rehydrator  │────▶│ Original     │
-│ (full)       │     │ llm convert  │     │ (any)   │     │  + codec     │     │ Shape        │
+│ Your Schema  │────▶│ json-schema-│────▶│  LLM    │────▶│  Rehydrator  │────▶│ Original     │
+│ (full)       │     │ llm convert │     │ (any)   │     │  + codec     │     │ Shape        │
 └──────────────┘     └──────┬───────┘     └─────────┘     └──────────────┘     └──────────────┘
                             │
                       ┌─────▼─────┐
@@ -88,6 +88,11 @@ json-schema-llm list-components schema.json
 
 # Rehydrate LLM output back to the original shape (pass original schema for type coercion)
 json-schema-llm rehydrate output.json --codec codec.json --schema schema.json
+
+# Generate a typed SDK from converted schemas
+json-schema-llm gen-sdk --language typescript --schema ./output/ --package @my-org/my-sdk --output ./sdk/
+json-schema-llm gen-sdk --language python --schema ./output/ --package my-sdk --output ./sdk/
+json-schema-llm gen-sdk --language java --schema ./output/ --package com.example.mysdk --output ./sdk/
 ```
 
 ### Library
@@ -363,21 +368,23 @@ The core library is written in **Rust** using `serde_json::Value` for schema man
 
 The 10-pass compiler pipeline, rehydrator, codec, and CLI are all implemented and tested.
 
-| Component               | Status      | Notes                                                                |
-| ----------------------- | ----------- | -------------------------------------------------------------------- |
-| Pass 0: Normalization   | ✅ Complete | `$ref` resolution, cycle detection, draft normalization              |
-| Pass 1: Composition     | ✅ Complete | `allOf` merge with property/required union                           |
-| Pass 2: Polymorphism    | ✅ Complete | `oneOf` → `anyOf` rewrite                                            |
-| Pass 3: Dictionary      | ✅ Complete | Map → Array transpilation with codec                                 |
-| Pass 4: Opaque Types    | ✅ Complete | Stringification with codec                                           |
-| Pass 5: Recursion       | ✅ Complete | Dynamic cycle detection, configurable depth limit                    |
-| Pass 6: Strict Mode     | ✅ Complete | `additionalProperties: false`, nullable optionals                    |
-| Pass 8: Adaptive Opaque | ✅ Complete | Stringify unreliable constructs (tuples, contains, object enums)     |
-| Pass 7: Constraints     | ✅ Complete | Constraint pruning, enum sorting, const→enum                         |
-| Rehydrator              | ✅ Complete | Full reverse transforms with advisory warnings                       |
-| Pipeline (`convert()`)  | ✅ Complete | Wires all 10 passes with codec accumulation                          |
-| CLI                     | ✅ Complete | `convert`, `rehydrate`, `extract`, `list-components`, `--output-dir` |
-| `extract_component()`   | ✅ Complete | Extract self-contained sub-schema with transitive `$ref` resolution  |
+| Component               | Status      | Notes                                                                           |
+| ----------------------- | ----------- | ------------------------------------------------------------------------------- |
+| Pass 0: Normalization   | ✅ Complete | `$ref` resolution, cycle detection, draft normalization                         |
+| Pass 1: Composition     | ✅ Complete | `allOf` merge with property/required union                                      |
+| Pass 2: Polymorphism    | ✅ Complete | `oneOf` → `anyOf` rewrite                                                       |
+| Pass 3: Dictionary      | ✅ Complete | Map → Array transpilation with codec                                            |
+| Pass 4: Opaque Types    | ✅ Complete | Stringification with codec                                                      |
+| Pass 5: Recursion       | ✅ Complete | Dynamic cycle detection, configurable depth limit                               |
+| Pass 6: Strict Mode     | ✅ Complete | `additionalProperties: false`, nullable optionals                               |
+| Pass 8: Adaptive Opaque | ✅ Complete | Stringify unreliable constructs (tuples, contains, object enums)                |
+| Pass 7: Constraints     | ✅ Complete | Constraint pruning, enum sorting, const→enum                                    |
+| Rehydrator              | ✅ Complete | Full reverse transforms with advisory warnings                                  |
+| Pipeline (`convert()`)  | ✅ Complete | Wires all 10 passes with codec accumulation                                     |
+| CLI                     | ✅ Complete | `convert`, `rehydrate`, `extract`, `list-components`, `gen-sdk`, `--output-dir` |
+| `extract_component()`   | ✅ Complete | Extract self-contained sub-schema with transitive `$ref` resolution             |
+| Gen-SDK (codegen)       | ✅ Complete | TypeScript, Python, Java project generation from converted schemas              |
+| TypeScript Engine       | ✅ Complete | `@json-schema-llm/engine` — full roundtrip orchestration package                |
 
 Validated against production-grade schemas including the OpenAPI 3.1 Specification Schema. All accepted by OpenAI Strict Mode with full round-trip rehydration.
 
@@ -385,8 +392,8 @@ Validated against production-grade schemas including the OpenAPI 3.1 Specificati
 
 See **[ROADMAP.md](ROADMAP.md)** for the full prioritized roadmap with epic progress, bucket breakdown, and execution order.
 
-| Epic                                                                                 | Status         | Progress | Description                                                                |
-| ------------------------------------------------------------------------------------ | -------------- | :------: | -------------------------------------------------------------------------- |
+| Epic                                                                                  | Status         | Progress | Description                                                                |
+| ------------------------------------------------------------------------------------- | -------------- | :------: | -------------------------------------------------------------------------- |
 | [Core Improvements](https://github.com/dotslashderek/json-schema-llm/issues/36)       | 🟡 Active      |   75%    | Walker unification, rehydrator decomposition, test hardening, docs cleanup |
 | [FFI Facade](https://github.com/dotslashderek/json-schema-llm/issues/37)              | ✅ Complete    |   100%   | JSON-string bridge API, stable error codes, serde-ready types              |
 | [TypeScript / JS (WASM)](https://github.com/dotslashderek/json-schema-llm/issues/38)  | ✅ Complete    |   100%   | `wasm-pack` + `serde-wasm-bindgen`, npm package                            |

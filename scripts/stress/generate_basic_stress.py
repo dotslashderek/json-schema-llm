@@ -1,4 +1,4 @@
-"""Generate stress test JSON Schema fixtures for jsonschema-llm.
+"""Generate stress test JSON Schema fixtures for json-schema-llm.
 
 Produces structurally diverse schemas for testing the conversion pipeline.
 Domain-specific real-world schemas live in tests/schemas/real-world/ (static).

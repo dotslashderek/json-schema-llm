@@ -33,7 +33,7 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           command: build
-          args: --release --out dist -m crates/jsonschema-llm-python/Cargo.toml
+          args: --release --out dist -m crates/json-schema-llm-python/Cargo.toml
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux || '' }}
 
@@ -52,7 +52,7 @@ jobs:
       - uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: -m crates/jsonschema-llm-python/Cargo.toml --out dist
+          args: -m crates/json-schema-llm-python/Cargo.toml --out dist
 
       - uses: actions/upload-artifact@v4
         with:
@@ -90,7 +90,7 @@ jobs:
           pip install --no-index dist/*.whl
 
       - name: Run tests
-        run: python -m pytest crates/jsonschema-llm-python/tests/ -v
+        run: python -m pytest crates/json-schema-llm-python/tests/ -v
 
   publish:
     name: Publish to PyPI

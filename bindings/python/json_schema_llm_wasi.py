@@ -1,5 +1,5 @@
 """
-WASI-backed wrapper for jsonschema-llm.
+WASI-backed wrapper for json-schema-llm.
 
 Uses wasmtime-py to load the universal WASI binary and exposes
 convert() and rehydrate() as Python functions.
@@ -39,7 +39,7 @@ class JslError(Exception):
 
 class Engine:
     """
-    WASI-backed jsonschema-llm engine.
+    WASI-backed json-schema-llm engine.
 
     Usage::
 

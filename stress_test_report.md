@@ -1,4 +1,4 @@
-# Stress Test Report — jsonschema-llm
+# Stress Test Report — json-schema-llm
 
 > **Status: STRUCTURALLY SOUND — COMPLIANCE GAPS NEED WORK**
 
@@ -11,16 +11,16 @@
 | **Seed**         | `42`                                 |
 | **Date**         | 2025-02-09                           |
 | **Schema Count** | 51 stress + 15 real-world = 66 total |
-| **CLI Binary**   | `target/release/jsonschema-llm`      |
+| **CLI Binary**   | `target/release/json-schema-llm`      |
 | **Commit**       | `c86374f` (stress-test/chaos-monkey) |
 
 ## Methodology
 
 The stress test pipeline exercises the full roundtrip:
 
-1. **Convert** — `jsonschema-llm convert` transforms input schema to OpenAI-strict format with codec
+1. **Convert** — `json-schema-llm convert` transforms input schema to OpenAI-strict format with codec
 2. **Generate** — Live OpenAI API call (`gpt-4o-mini`) produces data matching the converted schema
-3. **Rehydrate** — `jsonschema-llm rehydrate` restores original structure using codec
+3. **Rehydrate** — `json-schema-llm rehydrate` restores original structure using codec
 4. **Validate** — `jsonschema.validate()` (Python) or AJV (TypeScript) checks rehydrated data against original schema
 
 > [!NOTE]
@@ -90,7 +90,7 @@ python scripts/stress/generate_basic_stress.py --seed 42
 
 # Run CLI stress test
 python scripts/stress/run_cli_test.py \
-  --bin target/release/jsonschema-llm \
+  --bin target/release/json-schema-llm \
   --schemas tests/schemas/stress \
   --model gpt-4o-mini \
   --timeout-subprocess 30 \
@@ -98,7 +98,7 @@ python scripts/stress/run_cli_test.py \
 
 # Run chatbot stress test (TS bindings)
 # First, build the JS bindings:
-wasm-pack build crates/jsonschema-llm-wasm --target nodejs --out-dir ../../dist
+wasm-pack build crates/json-schema-llm-wasm --target nodejs --out-dir ../../dist
 cd examples/stress-test-bot
 pnpm install && pnpm start -- --count 20 --seed 42 --model gpt-4o-mini
 ```

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jsonschema-llm-wasi"
+name = "json-schema-llm-wasi"
 version = "0.1.0"
-description = "WASI wrapper for jsonschema-llm"
+description = "WASI wrapper for json-schema-llm"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

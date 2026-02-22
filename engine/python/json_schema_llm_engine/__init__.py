@@ -1,4 +1,4 @@
-"""jsonschema-llm Python engine — LLM roundtrip orchestration.
+"""json-schema-llm Python engine — LLM roundtrip orchestration.
 
 Public API re-exports for consumer convenience.
 """

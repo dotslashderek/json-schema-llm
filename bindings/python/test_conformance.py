@@ -1,4 +1,4 @@
-"""Conformance fixture tests for the WASI-backed jsonschema-llm wrapper.
+"""Conformance fixture tests for the WASI-backed json-schema-llm wrapper.
 
 Loads fixtures from tests/conformance/fixtures.json and runs each fixture
 through the appropriate engine method, asserting expected outcomes.

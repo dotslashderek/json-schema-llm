@@ -38,16 +38,16 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy lints
-        run: cargo clippy --workspace --exclude jsonschema-llm-python --exclude jsonschema-llm-wasi --all-targets -- -D warnings
+        run: cargo clippy --workspace --exclude json-schema-llm-wasi --all-targets -- -D warnings
 
       - name: Run tests
         run: |
           echo "::group::Unit & Integration Tests"
-          cargo test --workspace --exclude jsonschema-llm-python --exclude jsonschema-llm-wasi --all-targets
+          cargo test --workspace --exclude json-schema-llm-wasi --all-targets
           echo "::endgroup::"
 
           echo "::group::Doc Tests"
-          cargo test --workspace --exclude jsonschema-llm-python --exclude jsonschema-llm-wasi --doc
+          cargo test --workspace --exclude json-schema-llm-wasi --doc
           echo "::endgroup::"
 
       - name: Build release binary
@@ -87,16 +87,16 @@ jobs:
           version: 10.10.0
 
       - name: Verify core compiles for wasm32
-        run: cargo check -p jsonschema-llm-core --target wasm32-unknown-unknown
+        run: cargo check -p json-schema-llm-core --target wasm32-unknown-unknown
 
       - name: Run WASM smoke tests
-        run: wasm-pack test --node crates/jsonschema-llm-wasm
+        run: wasm-pack test --node crates/json-schema-llm-wasm
 
       - name: Build WASM (nodejs)
-        run: wasm-pack build crates/jsonschema-llm-wasm --target nodejs --out-dir ../../tests/contract-node/pkg
+        run: wasm-pack build crates/json-schema-llm-wasm --target nodejs --out-dir ../../tests/contract-node/pkg
 
       - name: Build WASM (web)
-        run: wasm-pack build crates/jsonschema-llm-wasm --target web
+        run: wasm-pack build crates/json-schema-llm-wasm --target web
 
       - name: Install contract test dependencies
         run: pnpm install --frozen-lockfile
@@ -112,10 +112,10 @@ jobs:
 
       # --- npm package assembly validation (#90) ---
       - name: Build WASM (nodejs) for npm assembly
-        run: wasm-pack build crates/jsonschema-llm-wasm --target nodejs --out-dir pkg-nodejs
+        run: wasm-pack build crates/json-schema-llm-wasm --target nodejs --out-dir pkg-nodejs
 
       - name: Build WASM (web) for npm assembly
-        run: wasm-pack build crates/jsonschema-llm-wasm --target web --out-dir pkg-web
+        run: wasm-pack build crates/json-schema-llm-wasm --target web --out-dir pkg-web
 
       - name: Assemble npm package
         run: bash scripts/assemble-npm.sh
@@ -123,7 +123,7 @@ jobs:
       - name: Validate npm package
         run: |
           echo "::group::Validate package.json fields"
-          jq -e '.name == "jsonschema-llm"' dist/package.json
+          jq -e '.name == "json-schema-llm"' dist/package.json
           jq -e '.exports["."].types == "./json_schema_llm_wasm.d.ts"' dist/package.json
           jq -e '.exports["."].node == "./json_schema_llm_wasm.js"' dist/package.json
           jq -e '.exports["."].default == "./web/json_schema_llm_wasm.js"' dist/package.json
@@ -157,7 +157,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build WASI binary
-        run: cargo build --target wasm32-wasip1 --release -p jsonschema-llm-wasi
+        run: cargo build --target wasm32-wasip1 --release -p json-schema-llm-wasi
 
       - name: Check binary size (must be ≤3 MB)
         run: |
@@ -171,7 +171,7 @@ jobs:
           echo "✅ Binary size within gate"
 
       - name: Clippy (WASI target)
-        run: cargo clippy -p jsonschema-llm-wasi --target wasm32-wasip1 -- -D warnings
+        run: cargo clippy -p json-schema-llm-wasi --target wasm32-wasip1 -- -D warnings
 
       - name: Set up Python
         uses: actions/setup-python@v5
