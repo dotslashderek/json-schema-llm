@@ -1,1 +1,1 @@
-rootProject.name = "jsonschema-llm-java"
+rootProject.name = "json-schema-llm-java"
