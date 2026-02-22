@@ -59,7 +59,9 @@ test-wasi-host: build-wasi
 	@command -v python3 > /dev/null || \
 		(echo "❌ python3 not found. Install Python 3.12+." && exit 1)
 	@python3 -c "import wasmtime" 2>/dev/null || \
-		(echo "⚠️  wasmtime package not found. Installing..." && python3 -m pip install wasmtime)
+		(echo "⚠️  wasmtime not found. Install with: python3 -m pip install wasmtime" && \
+		 echo "   (If on a strict PEP 668 system, activate a venv first.)" && \
+		 python3 -m pip install wasmtime)
 	python3 tests/wasi/host_verify.py
 	@echo "✅ WASI host verification passed"
 
@@ -74,12 +76,8 @@ test-wrappers: build-wasi
 ## Run Rust workspace tests (mirrors CI exclusions)
 test-rust:
 	@echo "🧪 Running Rust workspace tests..."
-	@echo "::group::Unit & Integration Tests"
 	cargo test --workspace --exclude jsonschema-llm-python --exclude jsonschema-llm-wasi --all-targets
-	@echo "::endgroup::"
-	@echo "::group::Doc Tests"
 	cargo test --workspace --exclude jsonschema-llm-python --exclude jsonschema-llm-wasi --doc
-	@echo "::endgroup::"
 	@echo "✅ All Rust tests passed"
 
 # ---------------------------------------------------------------------------
