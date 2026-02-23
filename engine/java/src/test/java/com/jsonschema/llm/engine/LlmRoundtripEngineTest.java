@@ -50,7 +50,14 @@ class LlmRoundtripEngineTest {
                 Assumptions.assumeTrue(
                                 Files.exists(wasmFile),
                                 "WASM binary not found at " + wasmFile + ". Build with: make build-wasi");
-                engine = LlmRoundtripEngine.create(wasmFile);
+                // Engine now owns formatter, config, and transport at construction time
+                engine = LlmRoundtripEngine.create(
+                                wasmFile,
+                                new ChatCompletionsFormatter(),
+                                new ProviderConfig(
+                                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
+                                                Map.of("Authorization", "Bearer test-key")),
+                                request -> openAiResponse("{\"name\": \"init\", \"age\": 0}"));
         }
 
         @AfterAll
@@ -61,33 +68,38 @@ class LlmRoundtripEngineTest {
         }
 
         // ---------------------------------------------------------------
+        // Helper: create a fresh engine with a specific transport
+        // ---------------------------------------------------------------
+
+        private static LlmRoundtripEngine engineWith(LlmTransport transport) {
+                return LlmRoundtripEngine.create(
+                                wasmPath(),
+                                new ChatCompletionsFormatter(),
+                                new ProviderConfig(
+                                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
+                                                Map.of()),
+                                transport);
+        }
+
+        // ---------------------------------------------------------------
         // 1. Full roundtrip with mock transport
         // ---------------------------------------------------------------
 
         @Test
         void fullRoundtrip_validData_isValid() throws Exception {
-                // Mock transport returns a valid OpenAI-shaped response
-                LlmTransport mockTransport = request -> openAiResponse(
-                                "{\"name\": \"Ada\", \"age\": 30}");
+                try (LlmRoundtripEngine e = engineWith(
+                                request -> openAiResponse("{\"name\": \"Ada\", \"age\": 30}"))) {
 
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of("Authorization", "Bearer test-key"));
+                        RoundtripResult result = e.generate(PERSON_SCHEMA, "Generate a person");
 
-                RoundtripResult result = engine.generate(
-                                PERSON_SCHEMA,
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                mockTransport);
-
-                assertThat(result).isNotNull();
-                assertThat(result.isValid()).isTrue();
-                assertThat(result.data()).isNotNull();
-                assertThat(result.data().get("name").asText()).isEqualTo("Ada");
-                assertThat(result.data().get("age").asInt()).isEqualTo(30);
-                assertThat(result.validationErrors()).isEmpty();
-                assertThat(result.rawLlmResponse()).isNotNull();
+                        assertThat(result).isNotNull();
+                        assertThat(result.isValid()).isTrue();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.data().get("name").asText()).isEqualTo("Ada");
+                        assertThat(result.data().get("age").asInt()).isEqualTo(30);
+                        assertThat(result.validationErrors()).isEmpty();
+                        assertThat(result.rawLlmResponse()).isNotNull();
+                }
         }
 
         // ---------------------------------------------------------------
@@ -97,24 +109,16 @@ class LlmRoundtripEngineTest {
         @Test
         void fullRoundtrip_invalidData_hasValidationErrors() throws Exception {
                 // Age is a string instead of integer — violates schema
-                LlmTransport mockTransport = request -> openAiResponse(
-                                "{\"name\": \"Ada\", \"age\": \"thirty\"}");
+                try (LlmRoundtripEngine e = engineWith(
+                                request -> openAiResponse("{\"name\": \"Ada\", \"age\": \"thirty\"}"))) {
 
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
+                        RoundtripResult result = e.generate(PERSON_SCHEMA, "Generate a person");
 
-                RoundtripResult result = engine.generate(
-                                PERSON_SCHEMA,
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                mockTransport);
-
-                assertThat(result).isNotNull();
-                assertThat(result.data()).isNotNull();
-                assertThat(result.isValid()).isFalse();
-                assertThat(result.validationErrors()).isNotEmpty();
+                        assertThat(result).isNotNull();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.isValid()).isFalse();
+                        assertThat(result.validationErrors()).isNotEmpty();
+                }
         }
 
         // ---------------------------------------------------------------
@@ -123,22 +127,13 @@ class LlmRoundtripEngineTest {
 
         @Test
         void transportFailure_propagatesException() {
-                LlmTransport failingTransport = request -> {
+                try (LlmRoundtripEngine e = engineWith(request -> {
                         throw new LlmTransportException("Service unavailable", 503);
-                };
-
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
-
-                assertThatThrownBy(() -> engine.generate(
-                                PERSON_SCHEMA,
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                failingTransport))
-                                .isInstanceOf(LlmTransportException.class)
-                                .hasMessageContaining("Service unavailable");
+                })) {
+                        assertThatThrownBy(() -> e.generate(PERSON_SCHEMA, "Generate a person"))
+                                        .isInstanceOf(LlmTransportException.class)
+                                        .hasMessageContaining("Service unavailable");
+                }
         }
 
         // ---------------------------------------------------------------
@@ -151,25 +146,18 @@ class LlmRoundtripEngineTest {
                 var wasiEngine = com.jsonschema.llm.wasi.SchemaLlmEngine.create(wasmPath());
                 var convertResult = wasiEngine.convert(MAPPER.readTree(PERSON_SCHEMA));
 
-                LlmTransport mockTransport = request -> openAiResponse(
-                                "{\"name\": \"Lovelace\", \"age\": 36}");
+                try (LlmRoundtripEngine e = engineWith(
+                                request -> openAiResponse("{\"name\": \"Lovelace\", \"age\": 36}"))) {
 
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
+                        RoundtripResult result = e.generateWithPreconverted(
+                                        PERSON_SCHEMA,
+                                        MAPPER.writeValueAsString(convertResult.codec()),
+                                        convertResult.schema(),
+                                        "Generate a person");
 
-                RoundtripResult result = engine.generateWithPreconverted(
-                                PERSON_SCHEMA,
-                                MAPPER.writeValueAsString(convertResult.codec()),
-                                convertResult.schema(),
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                mockTransport);
-
-                assertThat(result.isValid()).isTrue();
-                assertThat(result.data().get("name").asText()).isEqualTo("Lovelace");
-
+                        assertThat(result.isValid()).isTrue();
+                        assertThat(result.data().get("name").asText()).isEqualTo("Lovelace");
+                }
                 wasiEngine.close();
         }
 
@@ -190,19 +178,15 @@ class LlmRoundtripEngineTest {
                                 }
                                 """;
 
-                LlmTransport mockTransport = request -> openAiResponse(
-                                "{\"score\": 42, \"rating\": 3.14}");
+                try (LlmRoundtripEngine e = engineWith(
+                                request -> openAiResponse("{\"score\": 42, \"rating\": 3.14}"))) {
 
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
+                        RoundtripResult result = e.generate(schema, "Generate scores");
 
-                RoundtripResult result = engine.generate(
-                                schema, "Generate scores", new ChatCompletionsFormatter(), config, mockTransport);
-
-                assertThat(result.isValid()).isTrue();
-                assertThat(result.data().get("score").asInt()).isEqualTo(42);
-                assertThat(result.data().get("rating").asDouble()).isEqualTo(3.14);
+                        assertThat(result.isValid()).isTrue();
+                        assertThat(result.data().get("score").asInt()).isEqualTo(42);
+                        assertThat(result.data().get("rating").asDouble()).isEqualTo(3.14);
+                }
         }
 
         // ---------------------------------------------------------------
@@ -222,21 +206,16 @@ class LlmRoundtripEngineTest {
                                 }
                                 """;
 
-                LlmTransport mockTransport = request -> openAiResponse(
-                                "{\"name\": \"Ada\", \"nickname\": null}");
+                try (LlmRoundtripEngine e = engineWith(
+                                request -> openAiResponse("{\"name\": \"Ada\", \"nickname\": null}"))) {
 
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
+                        RoundtripResult result = e.generate(schema, "Generate a person");
 
-                RoundtripResult result = engine.generate(
-                                schema, "Generate a person", new ChatCompletionsFormatter(), config, mockTransport);
-
-                assertThat(result.data()).isNotNull();
-                assertThat(result.data().get("name").asText()).isEqualTo("Ada");
-                // Rehydrator may strip null optional fields or keep them as JSON null
-                JsonNode nickname = result.data().get("nickname");
-                assertThat(nickname == null || nickname.isNull()).isTrue();
+                        assertThat(result.data()).isNotNull();
+                        assertThat(result.data().get("name").asText()).isEqualTo("Ada");
+                        JsonNode nickname = result.data().get("nickname");
+                        assertThat(nickname == null || nickname.isNull()).isTrue();
+                }
         }
 
         // ---------------------------------------------------------------
@@ -245,19 +224,10 @@ class LlmRoundtripEngineTest {
 
         @Test
         void invalidSchema_throwsEngineException() {
-                LlmTransport mockTransport = request -> openAiResponse("{}");
-
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
-
-                assertThatThrownBy(() -> engine.generate(
-                                "NOT VALID JSON",
-                                "Generate something",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                mockTransport))
-                                .isInstanceOf(EngineException.class);
+                try (LlmRoundtripEngine e = engineWith(request -> openAiResponse("{}"))) {
+                        assertThatThrownBy(() -> e.generate("NOT VALID JSON", "Generate something"))
+                                        .isInstanceOf(EngineException.class);
+                }
         }
 
         // ---------------------------------------------------------------
@@ -266,19 +236,10 @@ class LlmRoundtripEngineTest {
 
         @Test
         void malformedLlmResponse_throwsEngineException() {
-                LlmTransport mockTransport = request -> "THIS IS NOT JSON";
-
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
-
-                assertThatThrownBy(() -> engine.generate(
-                                PERSON_SCHEMA,
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                mockTransport))
-                                .isInstanceOf(EngineException.ResponseParsingException.class);
+                try (LlmRoundtripEngine e = engineWith(request -> "THIS IS NOT JSON")) {
+                        assertThatThrownBy(() -> e.generate(PERSON_SCHEMA, "Generate a person"))
+                                        .isInstanceOf(EngineException.ResponseParsingException.class);
+                }
         }
 
         // ---------------------------------------------------------------
@@ -287,26 +248,17 @@ class LlmRoundtripEngineTest {
 
         @Test
         void http5xx_propagatesWithStatusCode() {
-                LlmTransport failingTransport = request -> {
+                try (LlmRoundtripEngine e = engineWith(request -> {
                         throw new LlmTransportException("Internal Server Error", 500);
-                };
-
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
-
-                assertThatThrownBy(() -> engine.generate(
-                                PERSON_SCHEMA,
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                failingTransport))
-                                .isInstanceOf(LlmTransportException.class)
-                                .satisfies(ex -> {
-                                        LlmTransportException tex = (LlmTransportException) ex;
-                                        assertThat(tex.getStatusCode()).isEqualTo(500);
-                                        assertThat(tex.isHttpError()).isTrue();
-                                });
+                })) {
+                        assertThatThrownBy(() -> e.generate(PERSON_SCHEMA, "Generate a person"))
+                                        .isInstanceOf(LlmTransportException.class)
+                                        .satisfies(ex -> {
+                                                LlmTransportException tex = (LlmTransportException) ex;
+                                                assertThat(tex.getStatusCode()).isEqualTo(500);
+                                                assertThat(tex.isHttpError()).isTrue();
+                                        });
+                }
         }
 
         // ---------------------------------------------------------------
@@ -315,27 +267,18 @@ class LlmRoundtripEngineTest {
 
         @Test
         void connectionTimeout_wrapsCorrectly() {
-                LlmTransport timeoutTransport = request -> {
+                try (LlmRoundtripEngine e = engineWith(request -> {
                         throw new LlmTransportException("Connection timed out", -1,
                                         new java.net.SocketTimeoutException("connect timed out"));
-                };
-
-                ProviderConfig config = new ProviderConfig(
-                                "https://api.openai.com/v1/chat/completions", "gpt-4o",
-                                Map.of());
-
-                assertThatThrownBy(() -> engine.generate(
-                                PERSON_SCHEMA,
-                                "Generate a person",
-                                new ChatCompletionsFormatter(),
-                                config,
-                                timeoutTransport))
-                                .isInstanceOf(LlmTransportException.class)
-                                .satisfies(ex -> {
-                                        LlmTransportException tex = (LlmTransportException) ex;
-                                        assertThat(tex.getStatusCode()).isEqualTo(-1);
-                                        assertThat(tex.isHttpError()).isFalse();
-                                });
+                })) {
+                        assertThatThrownBy(() -> e.generate(PERSON_SCHEMA, "Generate a person"))
+                                        .isInstanceOf(LlmTransportException.class)
+                                        .satisfies(ex -> {
+                                                LlmTransportException tex = (LlmTransportException) ex;
+                                                assertThat(tex.getStatusCode()).isEqualTo(-1);
+                                                assertThat(tex.isHttpError()).isFalse();
+                                        });
+                }
         }
 
         // ---------------------------------------------------------------
@@ -344,11 +287,8 @@ class LlmRoundtripEngineTest {
 
         @Test
         void structuredWarning_isPreservedNotDiscarded() throws Exception {
-                // Verify that a structured warning object node is serialised via toString()
-                // (producing a JSON snippet) and not asText() (which returns "" for objects).
                 ObjectMapper mapper = new ObjectMapper();
 
-                // Simulate two warning payloads: one plain string, one structured object
                 String warningsJson = """
                                 [
                                   "plain string warning",
@@ -357,16 +297,13 @@ class LlmRoundtripEngineTest {
                                 """;
                 com.fasterxml.jackson.databind.JsonNode warnings = mapper.readTree(warningsJson);
 
-                // Apply the same extraction logic used in LlmRoundtripEngine
                 java.util.List<String> extracted = new java.util.ArrayList<>();
                 for (com.fasterxml.jackson.databind.JsonNode w : warnings) {
                         extracted.add(w.isTextual() ? w.asText() : w.toString());
                 }
 
                 assertThat(extracted).hasSize(2);
-                // Plain string should remain clean (no extra quotes)
                 assertThat(extracted.get(0)).isEqualTo("plain string warning");
-                // Structured object must NOT be empty and must contain the field values
                 assertThat(extracted.get(1)).isNotEmpty();
                 assertThat(extracted.get(1)).contains("coercion applied");
                 assertThat(extracted.get(1)).contains("/name");

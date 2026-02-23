@@ -32,15 +32,14 @@ npm run build
 import { LlmRoundtripEngine, OpenAIFormatter, FetchTransport } from "@json-schema-llm/engine";
 {% for component in components %}import * as {{ component.module_name }} from "{{ package_name }}/{{ component.module_name }}";
 {% endfor %}
-const engine = new LlmRoundtripEngine();
+const engine = new LlmRoundtripEngine(
+  new OpenAIFormatter(),
+  { url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", headers: { Authorization: `Bearer ${apiKey}` } },
+  new FetchTransport(),
+);
 const result = await {{ components.0.module_name }}.generate(
   "Your prompt here",
-  {
-    engine,
-    formatter: new OpenAIFormatter(),
-    config: { url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", headers: { Authorization: "Bearer ..." } },
-    transport: new FetchTransport(),
-  },
+  engine,
 );
 console.log(result.data);
 engine.close();

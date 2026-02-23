@@ -30,26 +30,38 @@ import type { ProviderConfig, RoundtripResult } from "./types.js";
  * ```ts
  * import { LlmRoundtripEngine, OpenAIFormatter, FetchTransport } from "@json-schema-llm/engine";
  *
- * const engine = new LlmRoundtripEngine();
- * const result = await engine.generate(
- *   schemaJson,
- *   "Generate a user profile",
+ * const engine = new LlmRoundtripEngine(
  *   new OpenAIFormatter(),
  *   { url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", headers: { Authorization: `Bearer ${key}` } },
  *   new FetchTransport(),
  * );
+ * const result = await engine.generate(schemaJson, "Generate a user profile");
  * console.log(result.data);
  * ```
  */
 export class LlmRoundtripEngine {
   private wasi: SchemaLlmEngine | null = null;
   private readonly wasmPath?: string;
+  private readonly formatter: ProviderFormatter;
+  private readonly config: ProviderConfig;
+  private readonly transport: LlmTransport;
 
   /**
-   * @param wasmPath - Optional explicit path to the WASI binary. Falls back to
-   *                   JSL_WASM_PATH env var → import.meta.resolve → repo-relative.
+   * @param formatter - Provider-specific request formatter.
+   * @param config    - Provider endpoint/model configuration.
+   * @param transport - Consumer-provided HTTP transport.
+   * @param wasmPath  - Optional explicit path to the WASI binary. Falls back to
+   *                    JSL_WASM_PATH env var → import.meta.resolve → repo-relative.
    */
-  constructor(wasmPath?: string) {
+  constructor(
+    formatter: ProviderFormatter,
+    config: ProviderConfig,
+    transport: LlmTransport,
+    wasmPath?: string,
+  ) {
+    this.formatter = formatter;
+    this.config = config;
+    this.transport = transport;
     this.wasmPath = wasmPath;
   }
 
@@ -65,18 +77,12 @@ export class LlmRoundtripEngine {
    * Full roundtrip: convert → format → call LLM → rehydrate → validate.
    *
    * @param schemaJson - The original JSON Schema as a string.
-   * @param prompt - The user's natural language prompt.
-   * @param formatter - Provider-specific request formatter.
-   * @param config - Provider endpoint configuration.
-   * @param transport - Consumer-provided HTTP transport.
+   * @param prompt     - The user's natural language prompt.
    * @returns RoundtripResult with rehydrated data and validation status.
    */
   async generate(
     schemaJson: string,
     prompt: string,
-    formatter: ProviderFormatter,
-    config: ProviderConfig,
-    transport: LlmTransport,
   ): Promise<RoundtripResult> {
     // Step 1: Convert schema to LLM-compatible form
     let convertResult: ConvertResult;
@@ -99,9 +105,6 @@ export class LlmRoundtripEngine {
       JSON.stringify(codec),
       llmSchema,
       prompt,
-      formatter,
-      config,
-      transport,
     );
   }
 
@@ -111,12 +114,9 @@ export class LlmRoundtripEngine {
    * Use when you have pre-built schema/codec from gen-sdk.
    *
    * @param schemaJson - The original JSON Schema as a string.
-   * @param codecJson - The codec (rehydration map) as a string.
-   * @param llmSchema - The LLM-compatible schema (already converted).
-   * @param prompt - The user's natural language prompt.
-   * @param formatter - Provider-specific request formatter.
-   * @param config - Provider endpoint configuration.
-   * @param transport - Consumer-provided HTTP transport.
+   * @param codecJson  - The codec (rehydration map) as a string.
+   * @param llmSchema  - The LLM-compatible schema (already converted).
+   * @param prompt     - The user's natural language prompt.
    * @returns RoundtripResult with rehydrated data and validation status.
    */
   async generateWithPreconverted(
@@ -124,20 +124,17 @@ export class LlmRoundtripEngine {
     codecJson: string,
     llmSchema: unknown,
     prompt: string,
-    formatter: ProviderFormatter,
-    config: ProviderConfig,
-    transport: LlmTransport,
   ): Promise<RoundtripResult> {
     // Step 2: Format the request for the provider
-    const request = formatter.format(prompt, llmSchema, config);
+    const request = this.formatter.format(prompt, llmSchema, this.config);
 
     // Step 3: Call the LLM via consumer transport
-    const rawResponse = await transport.execute(request);
+    const rawResponse = await this.transport.execute(request);
 
     // Step 4: Extract content from the response
     let content: string;
     try {
-      content = formatter.extractContent(rawResponse);
+      content = this.formatter.extractContent(rawResponse);
     } catch (e) {
       if (e instanceof ResponseParsingError) throw e;
       throw new ResponseParsingError(`Failed to extract content: ${e}`);

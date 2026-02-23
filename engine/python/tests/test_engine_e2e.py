@@ -85,7 +85,14 @@ class TestConvertRoundtrip:
     def test_convert_returns_expected_keys(self) -> None:
         from json_schema_llm_engine.engine import LlmRoundtripEngine
 
-        engine = LlmRoundtripEngine(wasm_path=str(_WASM_PATH))
+        from json_schema_llm_engine.formatters.chat_completions import ChatCompletionsFormatter
+        from json_schema_llm_engine.types import ProviderConfig
+        engine = LlmRoundtripEngine(
+            formatter=ChatCompletionsFormatter(),
+            config=ProviderConfig(url="http://localhost", model="stub"),
+            transport=StubTransport("{}"),
+            wasm_path=str(_WASM_PATH),
+        )
         result = engine._call_wasi("jsl_convert", PERSON_SCHEMA, "{}")
 
         assert "apiVersion" in result, f"Missing apiVersion: {result}"
@@ -97,7 +104,14 @@ class TestConvertRoundtrip:
     def test_convert_schema_has_properties(self) -> None:
         from json_schema_llm_engine.engine import LlmRoundtripEngine
 
-        engine = LlmRoundtripEngine(wasm_path=str(_WASM_PATH))
+        from json_schema_llm_engine.formatters.chat_completions import ChatCompletionsFormatter
+        from json_schema_llm_engine.types import ProviderConfig
+        engine = LlmRoundtripEngine(
+            formatter=ChatCompletionsFormatter(),
+            config=ProviderConfig(url="http://localhost", model="stub"),
+            transport=StubTransport("{}"),
+            wasm_path=str(_WASM_PATH),
+        )
         result = engine._call_wasi("jsl_convert", PERSON_SCHEMA, "{}")
         schema = result["schema"]
 
@@ -111,7 +125,14 @@ class TestRehydrateRoundtrip:
     def test_rehydrate_recovers_original_data(self) -> None:
         from json_schema_llm_engine.engine import LlmRoundtripEngine
 
-        engine = LlmRoundtripEngine(wasm_path=str(_WASM_PATH))
+        from json_schema_llm_engine.formatters.chat_completions import ChatCompletionsFormatter
+        from json_schema_llm_engine.types import ProviderConfig
+        engine = LlmRoundtripEngine(
+            formatter=ChatCompletionsFormatter(),
+            config=ProviderConfig(url="http://localhost", model="stub"),
+            transport=StubTransport("{}"),
+            wasm_path=str(_WASM_PATH),
+        )
 
         # Step 1: Convert
         convert_result = engine._call_wasi("jsl_convert", PERSON_SCHEMA, "{}")
@@ -136,7 +157,14 @@ class TestConvertErrorPropagates:
         from json_schema_llm_engine.engine import LlmRoundtripEngine
         from json_schema_llm_engine.exceptions import SchemaConversionError
 
-        engine = LlmRoundtripEngine(wasm_path=str(_WASM_PATH))
+        from json_schema_llm_engine.formatters.chat_completions import ChatCompletionsFormatter
+        from json_schema_llm_engine.types import ProviderConfig
+        engine = LlmRoundtripEngine(
+            formatter=ChatCompletionsFormatter(),
+            config=ProviderConfig(url="http://localhost", model="stub"),
+            transport=StubTransport("{}"),
+            wasm_path=str(_WASM_PATH),
+        )
 
         with pytest.raises(SchemaConversionError) as exc_info:
             engine._call_wasi("jsl_convert", "NOT VALID JSON", "{}")
@@ -155,21 +183,21 @@ class TestGenerateFullRoundtrip:
         )
         from json_schema_llm_engine.types import ProviderConfig, RoundtripResult
 
-        engine = LlmRoundtripEngine(wasm_path=str(_WASM_PATH))
-        formatter = ChatCompletionsFormatter()
-        config = ProviderConfig(
-            url="https://api.openai.com/v1/chat/completions",
-            model="gpt-4o",
-            headers={"Authorization": "Bearer test-key"},
-        )
         transport = StubTransport('{"name": "Ada", "age": 36}')
+        engine = LlmRoundtripEngine(
+            formatter=ChatCompletionsFormatter(),
+            config=ProviderConfig(
+                url="https://api.openai.com/v1/chat/completions",
+                model="gpt-4o",
+                headers={"Authorization": "Bearer test-key"},
+            ),
+            transport=transport,
+            wasm_path=str(_WASM_PATH),
+        )
 
         result = engine.generate(
             schema_json=PERSON_SCHEMA,
             prompt="Generate a person",
-            formatter=formatter,
-            config=config,
-            transport=transport,
         )
 
         assert isinstance(result, RoundtripResult)
