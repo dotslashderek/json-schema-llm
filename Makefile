@@ -52,6 +52,10 @@ distribute-wasm: build-wasi
 	cp -f target/wasm32-wasip1/release/json_schema_llm_wasi.wasm \
 		engine/python/json_schema_llm_engine/wasm/json_schema_llm_wasi.wasm
 	@echo "  → engine/python/json_schema_llm_engine/wasm/ (Engine Python bundle)"
+	@mkdir -p bindings/ts/wasm
+	cp -f target/wasm32-wasip1/release/json_schema_llm_wasi.wasm \
+		bindings/ts/wasm/json_schema_llm_wasi.wasm
+	@echo "  → bindings/ts/wasm/ (TS/Node package bundle)"
 	@echo "✅ WASM binary distributed to all targets"
 
 # ---------------------------------------------------------------------------
@@ -91,6 +95,7 @@ test-engines: distribute-wasm
 	@echo "🧪 Running engine E2E tests..."
 	cd engine/python && python -m pytest -v -m e2e
 	cd engine/java && mvn test -Dgroups=e2e -q
+	cd engine/typescript && pnpm test
 	@echo "✅ Engine E2E tests passed"
 
 ## Run Rust workspace tests (mirrors CI exclusions)
@@ -126,7 +131,7 @@ help:
 	@echo ""
 	@echo "Individual targets:"
 	@echo "  make build-wasi        Build WASI binary (wasm32-wasip1)"
-	@echo "  make distribute-wasm   Build + copy WASM to Go embed + Engine Python"
+	@echo "  make distribute-wasm   Build + copy WASM to Go embed + Engine Python + TS/Node"
 	@echo "  make test-wasm-smoke   WASM smoke tests (wasm-pack + Node.js)"
 	@echo "  make test-wasi-host    WASI host verification (Python + wasmtime)"
 	@echo "  make test-wrappers     Docker wrapper tests (6 languages)"
