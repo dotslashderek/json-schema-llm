@@ -82,6 +82,9 @@ bindings/dotnet/**/obj/
 # Engine Python — bundled WASM binary
 engine/python/json_schema_llm_engine/wasm/*.wasm
 
+# TS/Node binding — bundled WASM binary
+bindings/ts/wasm/*.wasm
+
 # Java WASI
 bindings/java-wasi/.gradle/
 bindings/java-wasi/build/
