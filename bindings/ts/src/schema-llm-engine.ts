@@ -56,7 +56,10 @@ function resolveWasmPath(options?: SchemaLlmEngineOptions): string {
 
   // Tier 2: Environment variable
   const envPath = process.env.JSL_WASM_PATH;
-  if (envPath && existsSync(envPath)) {
+  if (envPath) {
+    if (!existsSync(envPath)) {
+      throw new Error(`WASM binary not found at JSL_WASM_PATH: ${envPath}`);
+    }
     return envPath;
   }
 
