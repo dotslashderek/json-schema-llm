@@ -111,10 +111,15 @@ Step-by-step walkthroughs for generating and using typed SDKs:
 <summary><strong>TypeScript / JavaScript</strong></summary>
 
 ```typescript
-import { convert, rehydrate } from "json-schema-llm";
+import { SchemaLlmEngine } from "@json-schema-llm/wasi";
+
+// Initialize the engine (auto-discovers WASM binary)
+const engine = await SchemaLlmEngine.create();
 
 // Convert
-const { schema, codec } = convert(mySchema, { target: "openai-strict" });
+const { schema, codec } = await engine.convert(mySchema, {
+  target: "openai-strict",
+});
 
 // Send to OpenAI
 const response = await openai.chat.completions.create({
@@ -127,11 +132,13 @@ const response = await openai.chat.completions.create({
 });
 
 // Rehydrate — maps restored, nulls stripped, JSON strings parsed, types coerced
-const original = rehydrate(
+const original = await engine.rehydrate(
   JSON.parse(response.choices[0].message.content),
   codec,
   mySchema,
 );
+
+engine.close();
 ```
 
 </details>
