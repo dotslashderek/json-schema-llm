@@ -24,26 +24,13 @@ use serde::Deserialize;
 // Test Suite data model
 // ---------------------------------------------------------------------------
 
-/// A single test case within a group.
-/// `data` and `valid` are kept for model completeness but unused —
-/// we test the compiler's structural output, not validator semantics.
-#[derive(Deserialize)]
-struct _TestCase {
-    #[allow(dead_code)]
-    description: String,
-    #[allow(dead_code)]
-    data: serde_json::Value,
-    #[allow(dead_code)]
-    valid: bool,
-}
-
 /// A group of test cases sharing a schema.
+/// Serde skips unknown fields by default — the `tests` array from the
+/// suite (data/valid pairs for validators) is never allocated.
 #[derive(Deserialize)]
 struct TestGroup {
     description: String,
     schema: serde_json::Value,
-    #[allow(dead_code)]
-    tests: Vec<_TestCase>,
 }
 
 // ---------------------------------------------------------------------------
