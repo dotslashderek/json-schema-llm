@@ -8,7 +8,7 @@
  * cached compiled module. Engine itself is NOT thread-safe.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { WASI } from "node:wasi";
 import { join } from "node:path";
 
