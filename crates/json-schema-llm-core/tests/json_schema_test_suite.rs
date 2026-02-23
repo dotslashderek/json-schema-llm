@@ -15,7 +15,8 @@
 //! ## Coverage
 //!
 //! - **Draft 2020-12**: All keyword files (skips noted below)
-//! - Draft 7 / 2019-09: Future scope
+//! - **Draft 7**: All keyword files (skips noted below)
+//! - Draft 2019-09: Future scope
 
 use json_schema_llm_core::{convert, ConvertOptions};
 use serde::Deserialize;
@@ -87,16 +88,18 @@ fn run_test_file(raw_json: &str, file_label: &str) {
 }
 
 // ---------------------------------------------------------------------------
-// Draft 2020-12 — one #[test] per keyword file
+// Macro: one #[test] per keyword file
 // ---------------------------------------------------------------------------
 
 macro_rules! suite_test {
-    ($name:ident, $file:literal) => {
+    ($name:ident, $draft:literal, $file:literal) => {
         #[test]
         fn $name() {
             run_test_file(
                 include_str!(concat!(
-                    "../../../vendor/JSON-Schema-Test-Suite/tests/draft2020-12/",
+                    "../../../vendor/JSON-Schema-Test-Suite/tests/",
+                    $draft,
+                    "/",
                     $file
                 )),
                 stringify!($name),
@@ -110,119 +113,172 @@ macro_rules! suite_test {
 
 suite_test!(
     draft2020_12_additional_properties,
+    "draft2020-12",
     "additionalProperties.json"
 );
-suite_test!(draft2020_12_all_of, "allOf.json");
-suite_test!(draft2020_12_anchor, "anchor.json");
-suite_test!(draft2020_12_any_of, "anyOf.json");
-suite_test!(draft2020_12_boolean_schema, "boolean_schema.json");
-suite_test!(draft2020_12_const, "const.json");
-suite_test!(draft2020_12_contains, "contains.json");
-suite_test!(draft2020_12_content, "content.json");
-suite_test!(draft2020_12_default, "default.json");
-suite_test!(draft2020_12_defs, "defs.json");
-suite_test!(draft2020_12_dependent_required, "dependentRequired.json");
-suite_test!(draft2020_12_dependent_schemas, "dependentSchemas.json");
+suite_test!(draft2020_12_all_of, "draft2020-12", "allOf.json");
+suite_test!(draft2020_12_anchor, "draft2020-12", "anchor.json");
+suite_test!(draft2020_12_any_of, "draft2020-12", "anyOf.json");
+suite_test!(
+    draft2020_12_boolean_schema,
+    "draft2020-12",
+    "boolean_schema.json"
+);
+suite_test!(draft2020_12_const, "draft2020-12", "const.json");
+suite_test!(draft2020_12_contains, "draft2020-12", "contains.json");
+suite_test!(draft2020_12_content, "draft2020-12", "content.json");
+suite_test!(draft2020_12_default, "draft2020-12", "default.json");
+suite_test!(draft2020_12_defs, "draft2020-12", "defs.json");
+suite_test!(
+    draft2020_12_dependent_required,
+    "draft2020-12",
+    "dependentRequired.json"
+);
+suite_test!(
+    draft2020_12_dependent_schemas,
+    "draft2020-12",
+    "dependentSchemas.json"
+);
 // SKIP: dynamicRef.json — $dynamicRef/$dynamicAnchor not yet supported
-suite_test!(draft2020_12_enum, "enum.json");
-suite_test!(draft2020_12_exclusive_maximum, "exclusiveMaximum.json");
-suite_test!(draft2020_12_exclusive_minimum, "exclusiveMinimum.json");
-suite_test!(draft2020_12_format, "format.json");
-suite_test!(draft2020_12_if_then_else, "if-then-else.json");
+suite_test!(draft2020_12_enum, "draft2020-12", "enum.json");
+suite_test!(
+    draft2020_12_exclusive_maximum,
+    "draft2020-12",
+    "exclusiveMaximum.json"
+);
+suite_test!(
+    draft2020_12_exclusive_minimum,
+    "draft2020-12",
+    "exclusiveMinimum.json"
+);
+suite_test!(draft2020_12_format, "draft2020-12", "format.json");
+suite_test!(
+    draft2020_12_if_then_else,
+    "draft2020-12",
+    "if-then-else.json"
+);
 suite_test!(
     draft2020_12_infinite_loop_detection,
+    "draft2020-12",
     "infinite-loop-detection.json"
 );
-suite_test!(draft2020_12_items, "items.json");
-suite_test!(draft2020_12_max_contains, "maxContains.json");
-suite_test!(draft2020_12_max_items, "maxItems.json");
-suite_test!(draft2020_12_max_length, "maxLength.json");
-suite_test!(draft2020_12_max_properties, "maxProperties.json");
-suite_test!(draft2020_12_maximum, "maximum.json");
-suite_test!(draft2020_12_min_contains, "minContains.json");
-suite_test!(draft2020_12_min_items, "minItems.json");
-suite_test!(draft2020_12_min_length, "minLength.json");
-suite_test!(draft2020_12_min_properties, "minProperties.json");
-suite_test!(draft2020_12_minimum, "minimum.json");
-suite_test!(draft2020_12_multiple_of, "multipleOf.json");
-suite_test!(draft2020_12_not, "not.json");
-suite_test!(draft2020_12_one_of, "oneOf.json");
-suite_test!(draft2020_12_pattern, "pattern.json");
-suite_test!(draft2020_12_pattern_properties, "patternProperties.json");
-suite_test!(draft2020_12_prefix_items, "prefixItems.json");
-suite_test!(draft2020_12_properties, "properties.json");
-suite_test!(draft2020_12_property_names, "propertyNames.json");
-suite_test!(draft2020_12_ref, "ref.json");
+suite_test!(draft2020_12_items, "draft2020-12", "items.json");
+suite_test!(
+    draft2020_12_max_contains,
+    "draft2020-12",
+    "maxContains.json"
+);
+suite_test!(draft2020_12_max_items, "draft2020-12", "maxItems.json");
+suite_test!(draft2020_12_max_length, "draft2020-12", "maxLength.json");
+suite_test!(
+    draft2020_12_max_properties,
+    "draft2020-12",
+    "maxProperties.json"
+);
+suite_test!(draft2020_12_maximum, "draft2020-12", "maximum.json");
+suite_test!(
+    draft2020_12_min_contains,
+    "draft2020-12",
+    "minContains.json"
+);
+suite_test!(draft2020_12_min_items, "draft2020-12", "minItems.json");
+suite_test!(draft2020_12_min_length, "draft2020-12", "minLength.json");
+suite_test!(
+    draft2020_12_min_properties,
+    "draft2020-12",
+    "minProperties.json"
+);
+suite_test!(draft2020_12_minimum, "draft2020-12", "minimum.json");
+suite_test!(draft2020_12_multiple_of, "draft2020-12", "multipleOf.json");
+suite_test!(draft2020_12_not, "draft2020-12", "not.json");
+suite_test!(draft2020_12_one_of, "draft2020-12", "oneOf.json");
+suite_test!(draft2020_12_pattern, "draft2020-12", "pattern.json");
+suite_test!(
+    draft2020_12_pattern_properties,
+    "draft2020-12",
+    "patternProperties.json"
+);
+suite_test!(
+    draft2020_12_prefix_items,
+    "draft2020-12",
+    "prefixItems.json"
+);
+suite_test!(draft2020_12_properties, "draft2020-12", "properties.json");
+suite_test!(
+    draft2020_12_property_names,
+    "draft2020-12",
+    "propertyNames.json"
+);
+suite_test!(draft2020_12_ref, "draft2020-12", "ref.json");
 // SKIP: refRemote.json — requires HTTP remote $ref resolution
-suite_test!(draft2020_12_required, "required.json");
-suite_test!(draft2020_12_type, "type.json");
-suite_test!(draft2020_12_unevaluated_items, "unevaluatedItems.json");
+suite_test!(draft2020_12_required, "draft2020-12", "required.json");
+suite_test!(draft2020_12_type, "draft2020-12", "type.json");
+suite_test!(
+    draft2020_12_unevaluated_items,
+    "draft2020-12",
+    "unevaluatedItems.json"
+);
 suite_test!(
     draft2020_12_unevaluated_properties,
+    "draft2020-12",
     "unevaluatedProperties.json"
 );
-suite_test!(draft2020_12_unique_items, "uniqueItems.json");
+suite_test!(
+    draft2020_12_unique_items,
+    "draft2020-12",
+    "uniqueItems.json"
+);
 // SKIP: vocabulary.json — meta-schema vocabulary negotiation (not applicable)
-
-// ---------------------------------------------------------------------------
-// Draft 7 — one #[test] per keyword file
-// ---------------------------------------------------------------------------
-
-macro_rules! suite_test_draft7 {
-    ($name:ident, $file:literal) => {
-        #[test]
-        fn $name() {
-            run_test_file(
-                include_str!(concat!(
-                    "../../../vendor/JSON-Schema-Test-Suite/tests/draft7/",
-                    $file
-                )),
-                stringify!($name),
-            );
-        }
-    };
-}
 
 // -- Draft 7 keyword files (alphabetical) ----------------------------------
 // Skipped: refRemote.json
 
-suite_test_draft7!(draft7_additional_items, "additionalItems.json");
-suite_test_draft7!(draft7_additional_properties, "additionalProperties.json");
-suite_test_draft7!(draft7_all_of, "allOf.json");
-suite_test_draft7!(draft7_any_of, "anyOf.json");
-suite_test_draft7!(draft7_boolean_schema, "boolean_schema.json");
-suite_test_draft7!(draft7_const, "const.json");
-suite_test_draft7!(draft7_contains, "contains.json");
-suite_test_draft7!(draft7_default, "default.json");
-suite_test_draft7!(draft7_definitions, "definitions.json");
-suite_test_draft7!(draft7_dependencies, "dependencies.json");
-suite_test_draft7!(draft7_enum, "enum.json");
-suite_test_draft7!(draft7_exclusive_maximum, "exclusiveMaximum.json");
-suite_test_draft7!(draft7_exclusive_minimum, "exclusiveMinimum.json");
-suite_test_draft7!(draft7_format, "format.json");
-suite_test_draft7!(draft7_if_then_else, "if-then-else.json");
-suite_test_draft7!(
+suite_test!(draft7_additional_items, "draft7", "additionalItems.json");
+suite_test!(
+    draft7_additional_properties,
+    "draft7",
+    "additionalProperties.json"
+);
+suite_test!(draft7_all_of, "draft7", "allOf.json");
+suite_test!(draft7_any_of, "draft7", "anyOf.json");
+suite_test!(draft7_boolean_schema, "draft7", "boolean_schema.json");
+suite_test!(draft7_const, "draft7", "const.json");
+suite_test!(draft7_contains, "draft7", "contains.json");
+suite_test!(draft7_default, "draft7", "default.json");
+suite_test!(draft7_definitions, "draft7", "definitions.json");
+suite_test!(draft7_dependencies, "draft7", "dependencies.json");
+suite_test!(draft7_enum, "draft7", "enum.json");
+suite_test!(draft7_exclusive_maximum, "draft7", "exclusiveMaximum.json");
+suite_test!(draft7_exclusive_minimum, "draft7", "exclusiveMinimum.json");
+suite_test!(draft7_format, "draft7", "format.json");
+suite_test!(draft7_if_then_else, "draft7", "if-then-else.json");
+suite_test!(
     draft7_infinite_loop_detection,
+    "draft7",
     "infinite-loop-detection.json"
 );
-suite_test_draft7!(draft7_items, "items.json");
-suite_test_draft7!(draft7_max_items, "maxItems.json");
-suite_test_draft7!(draft7_max_length, "maxLength.json");
-suite_test_draft7!(draft7_max_properties, "maxProperties.json");
-suite_test_draft7!(draft7_maximum, "maximum.json");
-suite_test_draft7!(draft7_min_items, "minItems.json");
-suite_test_draft7!(draft7_min_length, "minLength.json");
-suite_test_draft7!(draft7_min_properties, "minProperties.json");
-suite_test_draft7!(draft7_minimum, "minimum.json");
-suite_test_draft7!(draft7_multiple_of, "multipleOf.json");
-suite_test_draft7!(draft7_not, "not.json");
-suite_test_draft7!(draft7_one_of, "oneOf.json");
-suite_test_draft7!(draft7_pattern, "pattern.json");
-suite_test_draft7!(draft7_pattern_properties, "patternProperties.json");
-suite_test_draft7!(draft7_properties, "properties.json");
-suite_test_draft7!(draft7_property_names, "propertyNames.json");
-suite_test_draft7!(draft7_ref, "ref.json");
+suite_test!(draft7_items, "draft7", "items.json");
+suite_test!(draft7_max_items, "draft7", "maxItems.json");
+suite_test!(draft7_max_length, "draft7", "maxLength.json");
+suite_test!(draft7_max_properties, "draft7", "maxProperties.json");
+suite_test!(draft7_maximum, "draft7", "maximum.json");
+suite_test!(draft7_min_items, "draft7", "minItems.json");
+suite_test!(draft7_min_length, "draft7", "minLength.json");
+suite_test!(draft7_min_properties, "draft7", "minProperties.json");
+suite_test!(draft7_minimum, "draft7", "minimum.json");
+suite_test!(draft7_multiple_of, "draft7", "multipleOf.json");
+suite_test!(draft7_not, "draft7", "not.json");
+suite_test!(draft7_one_of, "draft7", "oneOf.json");
+suite_test!(draft7_pattern, "draft7", "pattern.json");
+suite_test!(
+    draft7_pattern_properties,
+    "draft7",
+    "patternProperties.json"
+);
+suite_test!(draft7_properties, "draft7", "properties.json");
+suite_test!(draft7_property_names, "draft7", "propertyNames.json");
+suite_test!(draft7_ref, "draft7", "ref.json");
 // SKIP: refRemote.json — requires HTTP remote $ref resolution
-suite_test_draft7!(draft7_required, "required.json");
-suite_test_draft7!(draft7_type, "type.json");
-suite_test_draft7!(draft7_unique_items, "uniqueItems.json");
+suite_test!(draft7_required, "draft7", "required.json");
+suite_test!(draft7_type, "draft7", "type.json");
+suite_test!(draft7_unique_items, "draft7", "uniqueItems.json");
