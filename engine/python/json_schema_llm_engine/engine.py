@@ -33,12 +33,33 @@ class LlmRoundtripEngine:
     A fresh Store + Instance is created per call (WASI modules are single-use).
 
     Args:
+        formatter: Provider-specific request formatter.
+        config: Provider endpoint/model configuration.
+        transport: Consumer-provided HTTP transport.
         wasm_path: Path to the json-schema-llm WASI binary. If None, uses
                    the JSON_SCHEMA_LLM_WASM_PATH environment variable or
                    falls back to importlib.resources.
+
+    Example::
+
+        engine = LlmRoundtripEngine(
+            formatter=ChatCompletionsFormatter(),
+            config=ProviderConfig(url="https://api.openai.com/v1/chat/completions", model="gpt-4o"),
+            transport=HttpTransport(),
+        )
+        result = engine.generate(schema_json, "Generate a user profile")
     """
 
-    def __init__(self, wasm_path: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        formatter: ProviderFormatter,
+        config: ProviderConfig,
+        transport: LlmTransport,
+        wasm_path: Optional[str] = None,
+    ) -> None:
+        self._formatter = formatter
+        self._config = config
+        self._transport = transport
         wasm_bytes = _resolve_wasm_bytes(wasm_path)
         self._engine = wasmtime.Engine()
         self._module = wasmtime.Module(self._engine, wasm_bytes)
@@ -47,18 +68,12 @@ class LlmRoundtripEngine:
         self,
         schema_json: str,
         prompt: str,
-        formatter: ProviderFormatter,
-        config: ProviderConfig,
-        transport: LlmTransport,
     ) -> RoundtripResult:
         """Full roundtrip: convert → format → call LLM → rehydrate → validate.
 
         Args:
             schema_json: The original JSON Schema as a string.
             prompt: The user's natural language prompt.
-            formatter: Provider-specific request formatter.
-            config: Provider endpoint configuration.
-            transport: Consumer-provided HTTP transport.
 
         Returns:
             RoundtripResult with rehydrated data and validation status.
@@ -73,9 +88,6 @@ class LlmRoundtripEngine:
             codec_json=json.dumps(codec),
             llm_schema=llm_schema,
             prompt=prompt,
-            formatter=formatter,
-            config=config,
-            transport=transport,
         )
 
     def generate_with_preconverted(
@@ -84,9 +96,6 @@ class LlmRoundtripEngine:
         codec_json: str,
         llm_schema: Any,
         prompt: str,
-        formatter: ProviderFormatter,
-        config: ProviderConfig,
-        transport: LlmTransport,
     ) -> RoundtripResult:
         """Roundtrip with pre-converted schema (skips the convert step).
 
@@ -97,22 +106,19 @@ class LlmRoundtripEngine:
             codec_json: The codec (rehydration map) as a string.
             llm_schema: The LLM-compatible schema (already converted).
             prompt: The user's natural language prompt.
-            formatter: Provider-specific request formatter.
-            config: Provider endpoint configuration.
-            transport: Consumer-provided HTTP transport.
 
         Returns:
             RoundtripResult with rehydrated data and validation status.
         """
         # Step 2: Format the request for the provider
-        request: LlmRequest = formatter.format(prompt, llm_schema, config)
+        request: LlmRequest = self._formatter.format(prompt, llm_schema, self._config)
 
         # Step 3: Call the LLM via consumer transport
-        raw_response = transport.execute(request)
+        raw_response = self._transport.execute(request)
 
         # Step 4: Extract content from the response
         try:
-            content = formatter.extract_content(raw_response)
+            content = self._formatter.extract_content(raw_response)
         except ResponseParsingError:
             raise
         except Exception as e:

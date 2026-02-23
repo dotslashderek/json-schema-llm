@@ -10,9 +10,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from json_schema_llm_engine import (
         LlmRoundtripEngine,
-        LlmTransport,
-        ProviderConfig,
-        ProviderFormatter,
         RoundtripResult,
     )
 
@@ -35,13 +32,7 @@ def original() -> Any:
     return _load_resource("schemas/{{ original_path }}")
 
 
-def generate(
-    prompt: str,
-    engine: LlmRoundtripEngine,
-    formatter: ProviderFormatter,
-    config: ProviderConfig,
-    transport: LlmTransport,
-) -> RoundtripResult:
+def generate(prompt: str, engine: LlmRoundtripEngine) -> RoundtripResult:
     """Run a full LLM roundtrip for {{ component_name }} using pre-built artifacts.
 
     Convenience wrapper that wires the pre-built :func:`original`, :func:`codec`,
@@ -50,10 +41,8 @@ def generate(
 
     Args:
         prompt: The natural language prompt for the LLM.
-        engine: An initialized :class:`~json_schema_llm_engine.LlmRoundtripEngine`.
-        formatter: Provider-specific request formatter.
-        config: Provider endpoint/model configuration.
-        transport: Consumer-provided HTTP transport.
+        engine: An initialized :class:`~json_schema_llm_engine.LlmRoundtripEngine`
+                already configured with formatter, config, and transport.
 
     Returns:
         :class:`~json_schema_llm_engine.RoundtripResult` with rehydrated data and validation info.
@@ -63,9 +52,6 @@ def generate(
         codec_json=json.dumps(codec()),
         llm_schema=schema(),
         prompt=prompt,
-        formatter=formatter,
-        config=config,
-        transport=transport,
     )
 
 

@@ -24,7 +24,7 @@ import java.util.Set;
  * <ol>
  * <li>Convert input schema to LLM-compatible format (via WASI)</li>
  * <li>Format an LLM request using the provider formatter</li>
- * <li>Execute the request via consumer-provided transport</li>
+ * <li>Execute the request via the configured transport</li>
  * <li>Extract the generated content from the response</li>
  * <li>Rehydrate to the original schema shape (via WASI)</li>
  * <li>Validate against the original schema</li>
@@ -33,35 +33,65 @@ import java.util.Set;
  * <p>
  * Thread-safe — the underlying {@link SchemaLlmEngine} creates a fresh
  * WASM Instance per call.
+ *
+ * <p>
+ * Example:
+ * 
+ * <pre>{@code
+ * var engine = LlmRoundtripEngine.create(formatter, config, transport);
+ * RoundtripResult result = engine.generate(schemaJson, "Generate a person");
+ * }</pre>
  */
 public class LlmRoundtripEngine implements AutoCloseable {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final SchemaLlmEngine wasiEngine;
+    private final ProviderFormatter formatter;
+    private final ProviderConfig config;
+    private final LlmTransport transport;
 
-    private LlmRoundtripEngine(SchemaLlmEngine wasiEngine) {
+    private LlmRoundtripEngine(
+            SchemaLlmEngine wasiEngine,
+            ProviderFormatter formatter,
+            ProviderConfig config,
+            LlmTransport transport) {
         this.wasiEngine = wasiEngine;
+        this.formatter = formatter;
+        this.config = config;
+        this.transport = transport;
     }
 
     /**
      * Create an engine with automatic WASM binary discovery.
      *
+     * @param formatter provider-specific request formatter
+     * @param config    provider endpoint/model configuration
+     * @param transport consumer-provided HTTP transport
      * @return a new engine instance
-     * @see SchemaLlmEngine#create()
      */
-    public static LlmRoundtripEngine create() {
-        return new LlmRoundtripEngine(SchemaLlmEngine.create());
+    public static LlmRoundtripEngine create(
+            ProviderFormatter formatter,
+            ProviderConfig config,
+            LlmTransport transport) {
+        return new LlmRoundtripEngine(SchemaLlmEngine.create(), formatter, config, transport);
     }
 
     /**
      * Create an engine for a specific WASM binary path.
      *
-     * @param wasmPath path to the jsonschema-llm WASM binary
+     * @param wasmPath  path to the jsonschema-llm WASM binary
+     * @param formatter provider-specific request formatter
+     * @param config    provider endpoint/model configuration
+     * @param transport consumer-provided HTTP transport
      * @return a new engine instance
      */
-    public static LlmRoundtripEngine create(Path wasmPath) {
-        return new LlmRoundtripEngine(SchemaLlmEngine.create(wasmPath));
+    public static LlmRoundtripEngine create(
+            Path wasmPath,
+            ProviderFormatter formatter,
+            ProviderConfig config,
+            LlmTransport transport) {
+        return new LlmRoundtripEngine(SchemaLlmEngine.create(wasmPath), formatter, config, transport);
     }
 
     /**
@@ -69,9 +99,6 @@ public class LlmRoundtripEngine implements AutoCloseable {
      *
      * @param schemaJson the original JSON Schema as a string
      * @param prompt     the natural language prompt for the LLM
-     * @param formatter  provider-specific request formatter
-     * @param config     provider endpoint/model configuration
-     * @param transport  consumer-provided HTTP transport
      * @return the roundtrip result with rehydrated data and validation info
      * @throws LlmTransportException if the transport fails
      * @throws EngineException       if schema conversion, rehydration, or parsing
@@ -79,10 +106,7 @@ public class LlmRoundtripEngine implements AutoCloseable {
      */
     public RoundtripResult generate(
             String schemaJson,
-            String prompt,
-            ProviderFormatter formatter,
-            ProviderConfig config,
-            LlmTransport transport) throws LlmTransportException {
+            String prompt) throws LlmTransportException {
 
         JsonNode schema = parseJson(schemaJson, "input schema");
 
@@ -95,7 +119,7 @@ public class LlmRoundtripEngine implements AutoCloseable {
                     "Schema conversion failed: " + e.getMessage(), e);
         }
 
-        return generateWithConvertResult(schema, convertResult, prompt, formatter, config, transport);
+        return generateWithConvertResult(schema, convertResult, prompt);
     }
 
     /**
@@ -107,11 +131,8 @@ public class LlmRoundtripEngine implements AutoCloseable {
      *
      * @param schemaJson the original JSON Schema as a string
      * @param codecJson  the codec sidecar JSON from a prior conversion
-     * @param prompt     the natural language prompt for the LLM
      * @param llmSchema  the pre-converted LLM-compatible schema
-     * @param formatter  provider-specific request formatter
-     * @param config     provider endpoint/model configuration
-     * @param transport  consumer-provided HTTP transport
+     * @param prompt     the natural language prompt for the LLM
      * @return the roundtrip result
      * @throws LlmTransportException if the transport fails
      */
@@ -119,10 +140,7 @@ public class LlmRoundtripEngine implements AutoCloseable {
             String schemaJson,
             String codecJson,
             JsonNode llmSchema,
-            String prompt,
-            ProviderFormatter formatter,
-            ProviderConfig config,
-            LlmTransport transport) throws LlmTransportException {
+            String prompt) throws LlmTransportException {
 
         JsonNode schema = parseJson(schemaJson, "input schema");
         JsonNode codec = parseJson(codecJson, "codec");
@@ -152,10 +170,7 @@ public class LlmRoundtripEngine implements AutoCloseable {
     private RoundtripResult generateWithConvertResult(
             JsonNode schema,
             ConvertResult convertResult,
-            String prompt,
-            ProviderFormatter formatter,
-            ProviderConfig config,
-            LlmTransport transport) throws LlmTransportException {
+            String prompt) throws LlmTransportException {
 
         // 2. Format the LLM request
         LlmRequest request = formatter.format(prompt, convertResult.schema(), config);
@@ -184,9 +199,7 @@ public class LlmRoundtripEngine implements AutoCloseable {
                     "Rehydration failed: " + e.getMessage(), e);
         }
 
-        // Extract warnings: use asText() for plain strings so scalar warnings stay
-        // clean (no extra quotes), and toString() for structured objects so their
-        // content (path, message, coercion rule) is not silently discarded.
+        // Extract warnings
         List<String> warnings = new ArrayList<>();
         if (rehydrateResult.warnings() != null && rehydrateResult.warnings().isArray()) {
             for (JsonNode w : rehydrateResult.warnings()) {
@@ -206,7 +219,6 @@ public class LlmRoundtripEngine implements AutoCloseable {
 
     private List<String> validate(JsonNode data, JsonNode schema) {
         try {
-            // Auto-detect spec version from $schema keyword, default to Draft-07
             SpecVersion.VersionFlag version = detectSpecVersion(schema);
             JsonSchemaFactory factory = JsonSchemaFactory.getInstance(version);
             JsonSchema jsonSchema = factory.getSchema(schema);
@@ -216,7 +228,6 @@ public class LlmRoundtripEngine implements AutoCloseable {
                     .map(ValidationMessage::getMessage)
                     .toList();
         } catch (Exception e) {
-            // If validation setup fails, report as a single validation error
             return List.of("Validation setup failed: " + e.getMessage());
         }
     }

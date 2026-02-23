@@ -20,6 +20,11 @@ const SIMPLE_SCHEMA = JSON.stringify({
   required: ["name", "age"],
 });
 
+const MOCK_CONFIG: ProviderConfig = {
+  url: "https://mock.api/v1/chat/completions",
+  model: "mock-model",
+};
+
 /** Mock transport that returns a canned LLM response. */
 class MockTransport implements LlmTransport {
   constructor(private readonly responseData: unknown) {}
@@ -57,6 +62,14 @@ class MockFormatter implements ProviderFormatter {
   }
 }
 
+function makeEngine(responseData: unknown): LlmRoundtripEngine {
+  return new LlmRoundtripEngine(
+    new MockFormatter(),
+    MOCK_CONFIG,
+    new MockTransport(responseData),
+  );
+}
+
 describe("LlmRoundtripEngine", () => {
   let engine: LlmRoundtripEngine;
 
@@ -65,28 +78,16 @@ describe("LlmRoundtripEngine", () => {
   });
 
   it("constructs without error", () => {
-    engine = new LlmRoundtripEngine();
+    engine = new LlmRoundtripEngine(new MockFormatter(), MOCK_CONFIG, new MockTransport({}));
     expect(engine).toBeInstanceOf(LlmRoundtripEngine);
   });
 
   describe("generate()", () => {
     it("performs full roundtrip with mock transport", async () => {
-      engine = new LlmRoundtripEngine();
       const mockData = { name: "Ada", age: 36 };
-      const transport = new MockTransport(mockData);
-      const formatter = new MockFormatter();
-      const config: ProviderConfig = {
-        url: "https://mock.api/v1/chat/completions",
-        model: "mock-model",
-      };
+      engine = makeEngine(mockData);
 
-      const result = await engine.generate(
-        SIMPLE_SCHEMA,
-        "Generate a user profile",
-        formatter,
-        config,
-        transport,
-      );
+      const result = await engine.generate(SIMPLE_SCHEMA, "Generate a user profile");
 
       expect(result.data).toEqual(mockData);
       expect(result.isValid).toBe(true);
@@ -95,23 +96,10 @@ describe("LlmRoundtripEngine", () => {
     });
 
     it("reports validation errors for invalid data", async () => {
-      engine = new LlmRoundtripEngine();
       // Missing required 'name' field
-      const mockData = { age: 36 };
-      const transport = new MockTransport(mockData);
-      const formatter = new MockFormatter();
-      const config: ProviderConfig = {
-        url: "https://mock.api/v1/chat/completions",
-        model: "mock-model",
-      };
+      engine = makeEngine({ age: 36 });
 
-      const result = await engine.generate(
-        SIMPLE_SCHEMA,
-        "Generate a user profile",
-        formatter,
-        config,
-        transport,
-      );
+      const result = await engine.generate(SIMPLE_SCHEMA, "Generate a user profile");
 
       expect(result.isValid).toBe(false);
       expect(result.validationErrors.length).toBeGreaterThan(0);
@@ -120,14 +108,8 @@ describe("LlmRoundtripEngine", () => {
 
   describe("generateWithPreconverted()", () => {
     it("works with pre-converted schema and codec", async () => {
-      engine = new LlmRoundtripEngine();
       const mockData = { name: "Charles", age: 42 };
-      const transport = new MockTransport(mockData);
-      const formatter = new MockFormatter();
-      const config: ProviderConfig = {
-        url: "https://mock.api/v1/chat/completions",
-        model: "mock-model",
-      };
+      engine = makeEngine(mockData);
 
       // Pre-convert using the underlying binding
       const { SchemaLlmEngine } = await import("@json-schema-llm/wasi");
@@ -140,9 +122,6 @@ describe("LlmRoundtripEngine", () => {
         JSON.stringify(converted.codec),
         converted.schema,
         "Generate a user",
-        formatter,
-        config,
-        transport,
       );
 
       expect(result.data).toEqual(mockData);
@@ -152,7 +131,7 @@ describe("LlmRoundtripEngine", () => {
 
   describe("close()", () => {
     it("can be called safely", () => {
-      engine = new LlmRoundtripEngine();
+      engine = new LlmRoundtripEngine(new MockFormatter(), MOCK_CONFIG, new MockTransport({}));
       engine.close();
       // Should not throw
     });

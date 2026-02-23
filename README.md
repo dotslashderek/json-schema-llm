@@ -79,21 +79,19 @@ import {
   LlmRoundtripEngine,
   OpenAIFormatter,
   FetchTransport,
-  ProviderConfig,
 } from "@json-schema-llm/engine";
 import * as UserProfile from "@my-org/my-sdk/userProfile";
 
-const engine = new LlmRoundtripEngine();
-const result = await UserProfile.generate("Generate a user profile", {
-  engine,
-  formatter: new OpenAIFormatter(),
-  config: {
+const engine = new LlmRoundtripEngine(
+  new OpenAIFormatter(),
+  {
     url: "https://api.openai.com/v1/chat/completions",
     model: "gpt-4o",
     headers: { Authorization: "Bearer ..." },
   },
-  transport: new FetchTransport(),
-});
+  new FetchTransport(),
+);
+const result = await UserProfile.generate("Generate a user profile", engine);
 console.log(result.data);
 engine.close();
 ```
@@ -104,13 +102,12 @@ engine.close();
 from my_sdk import user_profile
 from json_schema_llm_engine import LlmRoundtripEngine, OpenAIFormatter, ProviderConfig, HttpTransport
 
-result = user_profile.generate(
-    "Generate a user profile",
-    engine=LlmRoundtripEngine(),
+engine = LlmRoundtripEngine(
     formatter=OpenAIFormatter(),
     config=ProviderConfig(url="https://api.openai.com/v1/chat/completions", model="gpt-4o", headers={"Authorization": "Bearer ..."}),
     transport=HttpTransport(),
 )
+result = user_profile.generate("Generate a user profile", engine)
 print(result.data)
 ```
 
@@ -120,12 +117,12 @@ print(result.data)
 import com.example.sdk.UserProfile;
 import com.jsonschema.llm.engine.*;
 
-RoundtripResult result = UserProfile.generate(
-    "Generate a user profile",
-    engine, new OpenAIFormatter(),
+var engine = LlmRoundtripEngine.create(
+    new OpenAIFormatter(),
     new ProviderConfig("https://api.openai.com/v1/chat/completions", "gpt-4o", Map.of("Authorization", "Bearer ...")),
-    transport
+    new HttpTransport()
 );
+RoundtripResult result = UserProfile.generate("Generate a user profile", engine);
 System.out.println(result.data());
 ```
 

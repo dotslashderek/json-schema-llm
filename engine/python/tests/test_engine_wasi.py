@@ -74,7 +74,12 @@ class TestGeneratePassesOptionsToConvert:
 
         config = ProviderConfig(url="http://test", model="test-model")
 
-        engine.generate(schema_json, "test prompt", formatter, config, transport)
+        # Inject dependencies directly — bypass __init__ since WASM is mocked
+        engine._formatter = formatter
+        engine._config = config
+        engine._transport = transport
+
+        engine.generate(schema_json, "test prompt")
 
         # Assert: jsl_convert was called with 2 JSON args (schema + options)
         convert_call = [c for c in call_log if c[0] == "jsl_convert"]
@@ -146,7 +151,12 @@ class TestGenerateReadsSchemaKey:
 
         config = ProviderConfig(url="http://test", model="test-model")
 
-        engine.generate(schema_json, "test prompt", formatter, config, transport)
+        # Inject dependencies directly — bypass __init__ since WASM is mocked
+        engine._formatter = formatter
+        engine._config = config
+        engine._transport = transport
+
+        engine.generate(schema_json, "test prompt")
 
         # The formatter should receive the schema from convert_result["schema"],
         # NOT an empty dict from convert_result.get("data", {})
