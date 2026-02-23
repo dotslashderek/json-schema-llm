@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { Engine, JslError } from "../src/index.js";
+import { Engine, JslError } from "../src/core.js";
 
 describe("JsonSchemaLlm WASI", () => {
   let engine: Engine;

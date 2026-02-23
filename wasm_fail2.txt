@@ -1,0 +1,500 @@
+2026-02-22T19:07:29.3248451Z yarn: 1.22.22
+2026-02-22T19:07:29.3249181Z ##[endgroup]
+2026-02-22T19:07:29.3355714Z ##[group]Run pnpm/action-setup@v4
+2026-02-22T19:07:29.3355977Z with:
+2026-02-22T19:07:29.3356156Z   version: 10.10.0
+2026-02-22T19:07:29.3356342Z   dest: ~/setup-pnpm
+2026-02-22T19:07:29.3356538Z   run_install: null
+2026-02-22T19:07:29.3356734Z   package_json_file: package.json
+2026-02-22T19:07:29.3357278Z   standalone: false
+2026-02-22T19:07:29.3357453Z env:
+2026-02-22T19:07:29.3357623Z   CARGO_TERM_COLOR: always
+2026-02-22T19:07:29.3357832Z   RUSTFLAGS: -D warnings
+2026-02-22T19:07:29.3358047Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:07:29.3358274Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:07:29.3358472Z   CACHE_ON_FAILURE: false
+2026-02-22T19:07:29.3358676Z ##[endgroup]
+2026-02-22T19:07:29.3901999Z ##[group]Running self-installer...
+2026-02-22T19:07:29.9911634Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-02-22T19:07:29.9993815Z Packages: +1
+2026-02-22T19:07:29.9994684Z +
+2026-02-22T19:07:30.4640872Z Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-02-22T19:07:30.4899143Z 
+2026-02-22T19:07:30.4899591Z dependencies:
+2026-02-22T19:07:30.4900209Z + pnpm 10.10.0 (10.30.1 is available)
+2026-02-22T19:07:30.4900522Z 
+2026-02-22T19:07:30.4926882Z Done in 938ms
+2026-02-22T19:07:30.5103820Z ##[endgroup]
+2026-02-22T19:07:30.5108573Z Installation Completed!
+2026-02-22T19:07:30.5179905Z ##[group]Run cargo check -p json-schema-llm-core --target wasm32-unknown-unknown
+2026-02-22T19:07:30.5180491Z [36;1mcargo check -p json-schema-llm-core --target wasm32-unknown-unknown[0m
+2026-02-22T19:07:30.5217875Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:07:30.5218113Z env:
+2026-02-22T19:07:30.5218294Z   CARGO_TERM_COLOR: always
+2026-02-22T19:07:30.5218519Z   RUSTFLAGS: -D warnings
+2026-02-22T19:07:30.5218746Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:07:30.5218976Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:07:30.5219180Z   CACHE_ON_FAILURE: false
+2026-02-22T19:07:30.5219439Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-02-22T19:07:30.5219742Z ##[endgroup]
+2026-02-22T19:07:30.6082287Z [1m[92m    Updating[0m crates.io index
+2026-02-22T19:07:31.3049678Z [1m[92m     Locking[0m 236 packages to latest compatible versions
+2026-02-22T19:07:31.3125552Z [1m[92m      Adding[0m criterion v0.5.1 [1m[33m(available: v0.8.2)[0m
+2026-02-22T19:07:31.3135176Z [1m[92m      Adding[0m generic-array v0.14.7 [1m[33m(available: v0.14.9)[0m
+2026-02-22T19:07:31.3412138Z [1m[92m Downloading[0m crates ...
+2026-02-22T19:07:31.4415832Z [1m[92m  Downloaded[0m form_urlencoded v1.2.2
+2026-02-22T19:07:31.4560322Z [1m[92m  Downloaded[0m yoke-derive v0.8.1
+2026-02-22T19:07:31.4574412Z [1m[92m  Downloaded[0m potential_utf v0.1.4
+2026-02-22T19:07:31.4636310Z [1m[92m  Downloaded[0m displaydoc v0.2.5
+2026-02-22T19:07:31.4672645Z [1m[92m  Downloaded[0m utf8_iter v1.0.4
+2026-02-22T19:07:31.4685637Z [1m[92m  Downloaded[0m zerofrom-derive v0.1.6
+2026-02-22T19:07:31.4696974Z [1m[92m  Downloaded[0m idna_adapter v1.2.1
+2026-02-22T19:07:31.4706425Z [1m[92m  Downloaded[0m zerofrom v0.1.6
+2026-02-22T19:07:31.4716670Z [1m[92m  Downloaded[0m stable_deref_trait v1.2.1
+2026-02-22T19:07:31.4740244Z [1m[92m  Downloaded[0m thiserror-impl v2.0.18
+2026-02-22T19:07:31.4775639Z [1m[92m  Downloaded[0m percent-encoding v2.3.2
+2026-02-22T19:07:31.4787518Z [1m[92m  Downloaded[0m smallvec v1.15.1
+2026-02-22T19:07:31.4811515Z [1m[92m  Downloaded[0m writeable v0.6.2
+2026-02-22T19:07:31.4833592Z [1m[92m  Downloaded[0m zmij v1.0.21
+2026-02-22T19:07:31.4854410Z [1m[92m  Downloaded[0m yoke v0.8.1
+2026-02-22T19:07:31.4874795Z [1m[92m  Downloaded[0m tinystr v0.8.2
+2026-02-22T19:07:31.4901131Z [1m[92m  Downloaded[0m unicode-ident v1.0.24
+2026-02-22T19:07:31.4932910Z [1m[92m  Downloaded[0m proc-macro2 v1.0.106
+2026-02-22T19:07:31.4966802Z [1m[92m  Downloaded[0m zerotrie v0.2.3
+2026-02-22T19:07:31.5006099Z [1m[92m  Downloaded[0m memchr v2.8.0
+2026-02-22T19:07:31.5061091Z [1m[92m  Downloaded[0m zerovec v0.11.5
+2026-02-22T19:07:31.5114263Z [1m[92m  Downloaded[0m aho-corasick v1.1.4
+2026-02-22T19:07:31.5166388Z [1m[92m  Downloaded[0m serde_json v1.0.149
+2026-02-22T19:07:31.5237867Z [1m[92m  Downloaded[0m regex v1.12.3
+2026-02-22T19:07:31.5290758Z [1m[92m  Downloaded[0m idna v1.1.0
+2026-02-22T19:07:31.5326080Z [1m[92m  Downloaded[0m icu_properties_data v2.1.2
+2026-02-22T19:07:31.5429539Z [1m[92m  Downloaded[0m url v2.5.8
+2026-02-22T19:07:31.5458812Z [1m[92m  Downloaded[0m serde_derive v1.0.228
+2026-02-22T19:07:31.5489293Z [1m[92m  Downloaded[0m serde_core v1.0.228
+2026-02-22T19:07:31.5516726Z [1m[92m  Downloaded[0m serde v1.0.228
+2026-02-22T19:07:31.5551377Z [1m[92m  Downloaded[0m syn v2.0.117
+2026-02-22T19:07:31.5656265Z [1m[92m  Downloaded[0m icu_provider v2.1.1
+2026-02-22T19:07:31.5681448Z [1m[92m  Downloaded[0m icu_collections v2.1.1
+2026-02-22T19:07:31.5742756Z [1m[92m  Downloaded[0m regex-syntax v0.8.9
+2026-02-22T19:07:31.5809498Z [1m[92m  Downloaded[0m tracing-core v0.1.36
+2026-02-22T19:07:31.5836209Z [1m[92m  Downloaded[0m quote v1.0.44
+2026-02-22T19:07:31.5862624Z [1m[92m  Downloaded[0m litemap v0.8.1
+2026-02-22T19:07:31.5885034Z [1m[92m  Downloaded[0m icu_normalizer_data v2.1.1
+2026-02-22T19:07:31.5905687Z [1m[92m  Downloaded[0m pin-project-lite v0.2.16
+2026-02-22T19:07:31.5962839Z [1m[92m  Downloaded[0m tracing v0.1.44
+2026-02-22T19:07:31.6128251Z [1m[92m  Downloaded[0m once_cell v1.21.3
+2026-02-22T19:07:31.6155167Z [1m[92m  Downloaded[0m icu_properties v2.1.2
+2026-02-22T19:07:31.6176769Z [1m[92m  Downloaded[0m tracing-attributes v0.1.31
+2026-02-22T19:07:31.6202612Z [1m[92m  Downloaded[0m zerovec-derive v0.11.2
+2026-02-22T19:07:31.6216924Z [1m[92m  Downloaded[0m icu_normalizer v2.1.1
+2026-02-22T19:07:31.6251455Z [1m[92m  Downloaded[0m icu_locale_core v2.1.1
+2026-02-22T19:07:31.6317556Z [1m[92m  Downloaded[0m regex-automata v0.4.14
+2026-02-22T19:07:31.6455818Z [1m[92m  Downloaded[0m thiserror v2.0.18
+2026-02-22T19:07:31.6519127Z [1m[92m  Downloaded[0m synstructure v0.13.2
+2026-02-22T19:07:31.6528921Z [1m[92m  Downloaded[0m itoa v1.0.17
+2026-02-22T19:07:31.6792770Z [1m[92m   Compiling[0m proc-macro2 v1.0.106
+2026-02-22T19:07:31.6793498Z [1m[92m   Compiling[0m quote v1.0.44
+2026-02-22T19:07:31.6794146Z [1m[92m   Compiling[0m unicode-ident v1.0.24
+2026-02-22T19:07:31.6795142Z [1m[92m    Checking[0m stable_deref_trait v1.2.1
+2026-02-22T19:07:31.7106310Z [1m[92m    Checking[0m litemap v0.8.1
+2026-02-22T19:07:31.7417655Z [1m[92m    Checking[0m writeable v0.6.2
+2026-02-22T19:07:31.8252725Z [1m[92m   Compiling[0m icu_properties_data v2.1.2
+2026-02-22T19:07:31.8460599Z [1m[92m   Compiling[0m icu_normalizer_data v2.1.1
+2026-02-22T19:07:31.8854437Z [1m[92m    Checking[0m memchr v2.8.0
+2026-02-22T19:07:31.9785131Z [1m[92m   Compiling[0m serde_core v1.0.228
+2026-02-22T19:07:32.0103374Z [1m[92m    Checking[0m smallvec v1.15.1
+2026-02-22T19:07:32.1422606Z [1m[92m   Compiling[0m zmij v1.0.21
+2026-02-22T19:07:32.1565626Z [1m[92m    Checking[0m aho-corasick v1.1.4
+2026-02-22T19:07:32.3341951Z [1m[92m   Compiling[0m serde v1.0.228
+2026-02-22T19:07:32.7677559Z [1m[92m   Compiling[0m syn v2.0.117
+2026-02-22T19:07:32.8036751Z [1m[92m    Checking[0m utf8_iter v1.0.4
+2026-02-22T19:07:32.8167749Z [1m[92m   Compiling[0m serde_json v1.0.149
+2026-02-22T19:07:32.8701117Z [1m[92m   Compiling[0m thiserror v2.0.18
+2026-02-22T19:07:32.9236740Z [1m[92m    Checking[0m once_cell v1.21.3
+2026-02-22T19:07:33.0358704Z [1m[92m    Checking[0m regex-syntax v0.8.9
+2026-02-22T19:07:33.1268719Z [1m[92m    Checking[0m percent-encoding v2.3.2
+2026-02-22T19:07:33.1984135Z [1m[92m    Checking[0m form_urlencoded v1.2.2
+2026-02-22T19:07:33.3050513Z [1m[92m    Checking[0m tracing-core v0.1.36
+2026-02-22T19:07:33.7790779Z [1m[92m    Checking[0m pin-project-lite v0.2.16
+2026-02-22T19:07:33.8175240Z [1m[92m    Checking[0m itoa v1.0.17
+2026-02-22T19:07:34.4231058Z [1m[92m    Checking[0m regex-automata v0.4.14
+2026-02-22T19:07:35.4948828Z [1m[92m   Compiling[0m synstructure v0.13.2
+2026-02-22T19:07:35.4949971Z [1m[92m    Checking[0m regex v1.12.3
+2026-02-22T19:07:36.5435753Z [1m[92m   Compiling[0m zerofrom-derive v0.1.6
+2026-02-22T19:07:36.5436651Z [1m[92m   Compiling[0m yoke-derive v0.8.1
+2026-02-22T19:07:36.5438473Z [1m[92m   Compiling[0m zerovec-derive v0.11.2
+2026-02-22T19:07:36.5439533Z [1m[92m   Compiling[0m displaydoc v0.2.5
+2026-02-22T19:07:37.3521724Z [1m[92m   Compiling[0m serde_derive v1.0.228
+2026-02-22T19:07:37.8776730Z [1m[92m   Compiling[0m tracing-attributes v0.1.31
+2026-02-22T19:07:38.0153885Z [1m[92m   Compiling[0m thiserror-impl v2.0.18
+2026-02-22T19:07:38.4383196Z [1m[92m    Checking[0m zerofrom v0.1.6
+2026-02-22T19:07:38.5062968Z [1m[92m    Checking[0m yoke v0.8.1
+2026-02-22T19:07:38.6302090Z [1m[92m    Checking[0m zerovec v0.11.5
+2026-02-22T19:07:39.0702156Z [1m[92m    Checking[0m tinystr v0.8.2
+2026-02-22T19:07:39.1814045Z [1m[92m    Checking[0m icu_locale_core v2.1.1
+2026-02-22T19:07:39.6257029Z [1m[92m    Checking[0m potential_utf v0.1.4
+2026-02-22T19:07:39.6819263Z [1m[92m    Checking[0m zerotrie v0.2.3
+2026-02-22T19:07:39.7565877Z [1m[92m    Checking[0m icu_collections v2.1.1
+2026-02-22T19:07:39.8499624Z [1m[92m    Checking[0m tracing v0.1.44
+2026-02-22T19:07:39.8728279Z [1m[92m    Checking[0m icu_provider v2.1.1
+2026-02-22T19:07:40.0460421Z [1m[92m    Checking[0m icu_properties v2.1.2
+2026-02-22T19:07:40.2430549Z [1m[92m    Checking[0m icu_normalizer v2.1.1
+2026-02-22T19:07:40.8061026Z [1m[92m    Checking[0m idna_adapter v1.2.1
+2026-02-22T19:07:40.8395431Z [1m[92m    Checking[0m idna v1.1.0
+2026-02-22T19:07:40.9597436Z [1m[92m    Checking[0m url v2.5.8
+2026-02-22T19:07:41.1749468Z [1m[92m    Checking[0m json-schema-llm-core v0.1.0 (/home/runner/work/json-schema-llm/json-schema-llm/crates/json-schema-llm-core)
+2026-02-22T19:07:41.8630778Z [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 11.29s
+2026-02-22T19:07:41.9116261Z ##[group]Run wasm-pack test --node crates/json-schema-llm-wasm
+2026-02-22T19:07:41.9116720Z [36;1mwasm-pack test --node crates/json-schema-llm-wasm[0m
+2026-02-22T19:07:41.9147119Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:07:41.9147343Z env:
+2026-02-22T19:07:41.9147520Z   CARGO_TERM_COLOR: always
+2026-02-22T19:07:41.9147747Z   RUSTFLAGS: -D warnings
+2026-02-22T19:07:41.9147967Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:07:41.9148194Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:07:41.9148402Z   CACHE_ON_FAILURE: false
+2026-02-22T19:07:41.9148655Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-02-22T19:07:41.9148949Z ##[endgroup]
+2026-02-22T19:07:43.1114229Z [INFO]: 🎯  Checking for the Wasm target...
+2026-02-22T19:07:43.3104716Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+2026-02-22T19:07:43.3106811Z [1m[92m   Compiling[0m wasm-bindgen-shared v0.2.111
+2026-02-22T19:07:43.3107713Z [1m[92m   Compiling[0m rustversion v1.0.22
+2026-02-22T19:07:43.3127277Z [1m[92m   Compiling[0m zerofrom v0.1.6
+2026-02-22T19:07:43.3400463Z [1m[92m   Compiling[0m once_cell v1.21.3
+2026-02-22T19:07:43.3836831Z [1m[92m   Compiling[0m yoke v0.8.1
+2026-02-22T19:07:43.4855480Z [1m[92m   Compiling[0m writeable v0.6.2
+2026-02-22T19:07:43.5012124Z [1m[92m   Compiling[0m zerovec v0.11.5
+2026-02-22T19:07:43.6181539Z [1m[92m   Compiling[0m litemap v0.8.1
+2026-02-22T19:07:43.7424428Z [1m[92m   Compiling[0m bumpalo v3.20.2
+2026-02-22T19:07:43.7553993Z [1m[92m   Compiling[0m zerotrie v0.2.3
+2026-02-22T19:07:43.9451963Z [1m[92m   Compiling[0m wasm-bindgen-macro-support v0.2.111
+2026-02-22T19:07:44.0087162Z [1m[92m   Compiling[0m tinystr v0.8.2
+2026-02-22T19:07:44.0106541Z [1m[92m   Compiling[0m potential_utf v0.1.4
+2026-02-22T19:07:44.1040812Z [1m[92m   Compiling[0m serde_core v1.0.228
+2026-02-22T19:07:44.1466594Z [1m[92m   Compiling[0m icu_locale_core v2.1.1
+2026-02-22T19:07:44.1653432Z [1m[92m   Compiling[0m wasm-bindgen v0.2.111
+2026-02-22T19:07:44.3140097Z [1m[92m   Compiling[0m unicode-ident v1.0.24
+2026-02-22T19:07:44.3451964Z [1m[92m   Compiling[0m icu_collections v2.1.1
+2026-02-22T19:07:44.6036107Z [1m[92m   Compiling[0m memchr v2.8.0
+2026-02-22T19:07:44.8952566Z [1m[92m   Compiling[0m icu_provider v2.1.1
+2026-02-22T19:07:44.9847952Z [1m[92m   Compiling[0m cfg-if v1.0.4
+2026-02-22T19:07:45.0126773Z [1m[92m   Compiling[0m icu_properties_data v2.1.2
+2026-02-22T19:07:45.1086099Z [1m[92m   Compiling[0m icu_normalizer_data v2.1.1
+2026-02-22T19:07:45.1451828Z [1m[92m   Compiling[0m pin-project-lite v0.2.16
+2026-02-22T19:07:45.1828914Z [1m[92m   Compiling[0m smallvec v1.15.1
+2026-02-22T19:07:45.2619744Z [1m[92m   Compiling[0m icu_properties v2.1.2
+2026-02-22T19:07:45.3341586Z [1m[92m   Compiling[0m icu_normalizer v2.1.1
+2026-02-22T19:07:45.9561599Z [1m[92m   Compiling[0m serde_json v1.0.149
+2026-02-22T19:07:46.0634716Z [1m[92m   Compiling[0m zmij v1.0.21
+2026-02-22T19:07:46.3160997Z [1m[92m   Compiling[0m idna_adapter v1.2.1
+2026-02-22T19:07:46.3865203Z [1m[92m   Compiling[0m aho-corasick v1.1.4
+2026-02-22T19:07:46.6547655Z [1m[92m   Compiling[0m libm v0.2.16
+2026-02-22T19:07:46.8996761Z [1m[92m   Compiling[0m itoa v1.0.17
+2026-02-22T19:07:47.0304393Z [1m[92m   Compiling[0m regex-syntax v0.8.9
+2026-02-22T19:07:47.4133507Z [1m[92m   Compiling[0m serde v1.0.228
+2026-02-22T19:07:47.9745488Z [1m[92m   Compiling[0m percent-encoding v2.3.2
+2026-02-22T19:07:48.1146655Z [1m[92m   Compiling[0m autocfg v1.5.0
+2026-02-22T19:07:48.1318478Z [1m[92m   Compiling[0m utf8_iter v1.0.4
+2026-02-22T19:07:48.2167721Z [1m[92m   Compiling[0m idna v1.1.0
+2026-02-22T19:07:48.5894002Z [1m[92m   Compiling[0m num-traits v0.2.19
+2026-02-22T19:07:48.6880037Z [1m[92m   Compiling[0m regex-automata v0.4.14
+2026-02-22T19:07:48.8443338Z [1m[92m   Compiling[0m wasm-bindgen-macro v0.2.111
+2026-02-22T19:07:49.1295137Z [1m[92m   Compiling[0m form_urlencoded v1.2.2
+2026-02-22T19:07:50.1950916Z [1m[92m   Compiling[0m tracing-core v0.1.36
+2026-02-22T19:07:50.5327929Z [1m[92m   Compiling[0m js-sys v0.3.88
+2026-02-22T19:07:50.6080150Z [1m[92m   Compiling[0m futures-task v0.3.32
+2026-02-22T19:07:50.7133616Z [1m[92m   Compiling[0m futures-core v0.3.32
+2026-02-22T19:07:50.7620827Z [1m[92m   Compiling[0m slab v0.4.12
+2026-02-22T19:07:50.7903750Z [1m[92m   Compiling[0m thiserror v2.0.18
+2026-02-22T19:07:50.8334104Z [1m[92m   Compiling[0m tracing v0.1.44
+2026-02-22T19:07:50.8729650Z [1m[92m   Compiling[0m futures-util v0.3.32
+2026-02-22T19:07:51.0058587Z [1m[92m   Compiling[0m regex v1.12.3
+2026-02-22T19:07:52.6505688Z [1m[92m   Compiling[0m url v2.5.8
+2026-02-22T19:07:53.1157167Z [1m[92m   Compiling[0m json-schema-llm-core v0.1.0 (/home/runner/work/json-schema-llm/json-schema-llm/crates/json-schema-llm-core)
+2026-02-22T19:07:53.4934648Z [1m[92m   Compiling[0m console_error_panic_hook v0.1.7
+2026-02-22T19:07:53.5917305Z [1m[92m   Compiling[0m async-trait v0.1.89
+2026-02-22T19:07:53.6800101Z [1m[92m   Compiling[0m wasm-bindgen-test-macro v0.3.61
+2026-02-22T19:07:54.0806760Z [1m[92m   Compiling[0m wasm-bindgen-test-shared v0.2.111
+2026-02-22T19:07:54.1712206Z [1m[92m   Compiling[0m nu-ansi-term v0.50.3
+2026-02-22T19:07:54.4618311Z [1m[92m   Compiling[0m oorandom v11.1.5
+2026-02-22T19:07:54.5279145Z [1m[92m   Compiling[0m cast v0.3.0
+2026-02-22T19:07:58.9331252Z [1m[92m   Compiling[0m wasm-bindgen-futures v0.4.61
+2026-02-22T19:07:58.9332853Z [1m[92m   Compiling[0m serde-wasm-bindgen v0.6.5
+2026-02-22T19:07:59.1319021Z [1m[92m   Compiling[0m wasm-bindgen-test v0.3.61
+2026-02-22T19:07:59.5362731Z [1m[92m   Compiling[0m json-schema-llm-wasm v0.1.0 (/home/runner/work/json-schema-llm/json-schema-llm/crates/json-schema-llm-wasm)
+2026-02-22T19:08:01.0097765Z [1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 17.76s
+2026-02-22T19:08:01.0215203Z [INFO]: ⬇️  Installing wasm-bindgen...
+2026-02-22T19:08:01.7478955Z [1m[92m    Finished[0m `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+2026-02-22T19:08:01.7503403Z [1m[92m     Running[0m unittests src/lib.rs (/home/runner/work/json-schema-llm/json-schema-llm/target/wasm32-unknown-unknown/debug/deps/json_schema_llm_wasm-980ffa408ec3e3c8.wasm)
+2026-02-22T19:08:02.1738652Z no tests to run!
+2026-02-22T19:08:02.2428740Z [1m[92m     Running[0m tests/wasm_smoke.rs (/home/runner/work/json-schema-llm/json-schema-llm/target/wasm32-unknown-unknown/debug/deps/wasm_smoke-cdfb36434dd301a2.wasm)
+2026-02-22T19:08:05.8529947Z Executing bindgen...                              
+2026-02-22T19:08:05.9376937Z                                                   
+2026-02-22T19:08:05.9377675Z running 9 tests
+2026-02-22T19:08:05.9475483Z test test_rehydrate_serde_error_for_bad_codec ... ok
+2026-02-22T19:08:05.9711381Z test test_rehydrate_round_trip ... ok
+2026-02-22T19:08:05.9725663Z test test_convert_with_null_options ... ok
+2026-02-22T19:08:05.9737077Z test test_convert_with_default_options ... ok
+2026-02-22T19:08:05.9743108Z test test_convert_serde_error_for_bad_options ... ok
+2026-02-22T19:08:05.9760184Z test test_convert_returns_envelope ... ok
+2026-02-22T19:08:05.9771278Z test test_convert_kebab_case_options ... ok
+2026-02-22T19:08:05.9784331Z test test_convert_camel_case_options ... ok
+2026-02-22T19:08:05.9816919Z test test_convert_all_targets ... ok
+2026-02-22T19:08:05.9820216Z 
+2026-02-22T19:08:05.9821369Z test result: ok. 9 passed; 0 failed; 0 ignored; 0 filtered out; finished in 0.05s
+2026-02-22T19:08:05.9821847Z 
+2026-02-22T19:08:05.9940845Z [1m[92m   Doc-tests[0m json_schema_llm_wasm
+2026-02-22T19:08:06.0294473Z                                                   
+2026-02-22T19:08:06.0295048Z running 0 tests
+2026-02-22T19:08:06.0295228Z 
+2026-02-22T19:08:06.0295607Z test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+2026-02-22T19:08:06.0295953Z 
+2026-02-22T19:08:06.0396465Z [WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.14.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+2026-02-22T19:08:06.0438677Z ##[group]Run wasm-pack build crates/json-schema-llm-wasm --target nodejs --out-dir ../../tests/contract-node/pkg
+2026-02-22T19:08:06.0440083Z [36;1mwasm-pack build crates/json-schema-llm-wasm --target nodejs --out-dir ../../tests/contract-node/pkg[0m
+2026-02-22T19:08:06.0475642Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:08:06.0475882Z env:
+2026-02-22T19:08:06.0476063Z   CARGO_TERM_COLOR: always
+2026-02-22T19:08:06.0476289Z   RUSTFLAGS: -D warnings
+2026-02-22T19:08:06.0476510Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:08:06.0476741Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:08:06.0476946Z   CACHE_ON_FAILURE: false
+2026-02-22T19:08:06.0477203Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-02-22T19:08:06.0477510Z ##[endgroup]
+2026-02-22T19:08:06.2578871Z [INFO]: 🎯  Checking for the Wasm target...
+2026-02-22T19:08:06.3490907Z [INFO]: 🌀  Compiling to Wasm...
+2026-02-22T19:08:06.4543693Z [1m[92m   Compiling[0m unicode-ident v1.0.24
+2026-02-22T19:08:06.4544603Z [1m[92m   Compiling[0m proc-macro2 v1.0.106
+2026-02-22T19:08:06.4545571Z [1m[92m   Compiling[0m quote v1.0.44
+2026-02-22T19:08:06.4546279Z [1m[92m   Compiling[0m stable_deref_trait v1.2.1
+2026-02-22T19:08:06.4841224Z [1m[92m   Compiling[0m wasm-bindgen-shared v0.2.111
+2026-02-22T19:08:06.5138415Z [1m[92m   Compiling[0m rustversion v1.0.22
+2026-02-22T19:08:06.6003877Z [1m[92m   Compiling[0m writeable v0.6.2
+2026-02-22T19:08:06.6058628Z [1m[92m   Compiling[0m litemap v0.8.1
+2026-02-22T19:08:06.7213019Z [1m[92m   Compiling[0m icu_normalizer_data v2.1.1
+2026-02-22T19:08:06.7556682Z [1m[92m   Compiling[0m icu_properties_data v2.1.2
+2026-02-22T19:08:06.7581698Z [1m[92m   Compiling[0m once_cell v1.21.3
+2026-02-22T19:08:06.9243295Z [1m[92m   Compiling[0m serde_core v1.0.228
+2026-02-22T19:08:06.9584090Z [1m[92m   Compiling[0m bumpalo v3.20.2
+2026-02-22T19:08:07.2056256Z [1m[92m   Compiling[0m wasm-bindgen v0.2.111
+2026-02-22T19:08:07.2784783Z [1m[92m   Compiling[0m syn v2.0.117
+2026-02-22T19:08:07.2961576Z [1m[92m   Compiling[0m smallvec v1.15.1
+2026-02-22T19:08:07.3148385Z [1m[92m   Compiling[0m memchr v2.8.0
+2026-02-22T19:08:07.8135772Z [1m[92m   Compiling[0m zmij v1.0.21
+2026-02-22T19:08:07.9043061Z [1m[92m   Compiling[0m cfg-if v1.0.4
+2026-02-22T19:08:07.9352675Z [1m[92m   Compiling[0m serde v1.0.228
+2026-02-22T19:08:07.9543733Z [1m[92m   Compiling[0m aho-corasick v1.1.4
+2026-02-22T19:08:08.1026501Z [1m[92m   Compiling[0m serde_json v1.0.149
+2026-02-22T19:08:08.1830702Z [1m[92m   Compiling[0m percent-encoding v2.3.2
+2026-02-22T19:08:08.3559206Z [1m[92m   Compiling[0m thiserror v2.0.18
+2026-02-22T19:08:08.5366041Z [1m[92m   Compiling[0m regex-syntax v0.8.9
+2026-02-22T19:08:09.9136618Z [1m[92m   Compiling[0m utf8_iter v1.0.4
+2026-02-22T19:08:10.0511895Z [1m[92m   Compiling[0m form_urlencoded v1.2.2
+2026-02-22T19:08:10.5016981Z [1m[92m   Compiling[0m regex-automata v0.4.14
+2026-02-22T19:08:11.5432355Z [1m[92m   Compiling[0m synstructure v0.13.2
+2026-02-22T19:08:12.0520541Z [1m[92m   Compiling[0m wasm-bindgen-macro-support v0.2.111
+2026-02-22T19:08:12.4429034Z [1m[92m   Compiling[0m zerofrom-derive v0.1.6
+2026-02-22T19:08:13.5394615Z [1m[92m   Compiling[0m zerofrom v0.1.6
+2026-02-22T19:08:13.6157470Z [1m[92m   Compiling[0m yoke-derive v0.8.1
+2026-02-22T19:08:14.4640990Z [1m[92m   Compiling[0m yoke v0.8.1
+2026-02-22T19:08:14.6092115Z [1m[92m   Compiling[0m zerovec-derive v0.11.2
+2026-02-22T19:08:15.3490386Z [1m[92m   Compiling[0m displaydoc v0.2.5
+2026-02-22T19:08:15.5665333Z [1m[92m   Compiling[0m zerovec v0.11.5
+2026-02-22T19:08:15.7518913Z [1m[92m   Compiling[0m wasm-bindgen-macro v0.2.111
+2026-02-22T19:08:15.8393816Z [1m[92m   Compiling[0m zerotrie v0.2.3
+2026-02-22T19:08:16.1588205Z [1m[92m   Compiling[0m tinystr v0.8.2
+2026-02-22T19:08:16.2140713Z [1m[92m   Compiling[0m potential_utf v0.1.4
+2026-02-22T19:08:16.3045394Z [1m[92m   Compiling[0m icu_locale_core v2.1.1
+2026-02-22T19:08:16.3184573Z [1m[92m   Compiling[0m icu_collections v2.1.1
+2026-02-22T19:08:16.9639262Z [1m[92m   Compiling[0m serde_derive v1.0.228
+2026-02-22T19:08:17.5659281Z [1m[92m   Compiling[0m icu_provider v2.1.1
+2026-02-22T19:08:17.8984502Z [1m[92m   Compiling[0m icu_properties v2.1.2
+2026-02-22T19:08:18.9204587Z [1m[92m   Compiling[0m icu_normalizer v2.1.1
+2026-02-22T19:08:19.5887231Z [1m[92m   Compiling[0m idna_adapter v1.2.1
+2026-02-22T19:08:19.6531150Z [1m[92m   Compiling[0m idna v1.1.0
+2026-02-22T19:08:20.1991243Z [1m[92m   Compiling[0m thiserror-impl v2.0.18
+2026-02-22T19:08:20.6286856Z [1m[92m   Compiling[0m tracing-attributes v0.1.31
+2026-02-22T19:08:21.3145985Z [1m[92m   Compiling[0m tracing-core v0.1.36
+2026-02-22T19:08:21.7303653Z [1m[92m   Compiling[0m itoa v1.0.17
+2026-02-22T19:08:21.7620355Z [1m[92m   Compiling[0m pin-project-lite v0.2.16
+2026-02-22T19:08:21.8042212Z [1m[92m   Compiling[0m tracing v0.1.44
+2026-02-22T19:08:21.9489776Z [1m[92m   Compiling[0m url v2.5.8
+2026-02-22T19:08:22.0533183Z [1m[92m   Compiling[0m js-sys v0.3.88
+2026-02-22T19:08:22.1703239Z [1m[92m   Compiling[0m regex v1.12.3
+2026-02-22T19:08:23.2322087Z [1m[92m   Compiling[0m json-schema-llm-core v0.1.0 (/home/runner/work/json-schema-llm/json-schema-llm/crates/json-schema-llm-core)
+2026-02-22T19:08:24.3622171Z [1m[92m   Compiling[0m console_error_panic_hook v0.1.7
+2026-02-22T19:08:31.0958606Z [1m[92m   Compiling[0m serde-wasm-bindgen v0.6.5
+2026-02-22T19:08:31.8392578Z [1m[92m   Compiling[0m json-schema-llm-wasm v0.1.0 (/home/runner/work/json-schema-llm/json-schema-llm/crates/json-schema-llm-wasm)
+2026-02-22T19:08:32.9793305Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 26.59s
+2026-02-22T19:08:32.9910352Z [INFO]: ⬇️  Installing wasm-bindgen...
+2026-02-22T19:08:35.0693056Z [INFO]: Optimizing wasm binaries with `wasm-opt`...
+2026-02-22T19:08:50.3830498Z [INFO]: License key is set in Cargo.toml but no LICENSE file(s) were found; Please add the LICENSE file(s) to your project directory
+2026-02-22T19:08:50.3831937Z [INFO]: ✨   Done in 44.16s
+2026-02-22T19:08:50.3832807Z [INFO]: 📦   Your wasm pkg is ready to publish at tests/contract-node/pkg.
+2026-02-22T19:08:50.3863205Z [WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.14.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+2026-02-22T19:08:50.3896161Z ##[group]Run wasm-pack build crates/json-schema-llm-wasm --target web
+2026-02-22T19:08:50.3896714Z [36;1mwasm-pack build crates/json-schema-llm-wasm --target web[0m
+2026-02-22T19:08:50.3927530Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:08:50.3927767Z env:
+2026-02-22T19:08:50.3927946Z   CARGO_TERM_COLOR: always
+2026-02-22T19:08:50.3928170Z   RUSTFLAGS: -D warnings
+2026-02-22T19:08:50.3928397Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:08:50.3928625Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:08:50.3928826Z   CACHE_ON_FAILURE: false
+2026-02-22T19:08:50.3929080Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-02-22T19:08:50.3929394Z ##[endgroup]
+2026-02-22T19:08:50.6036681Z [INFO]: 🎯  Checking for the Wasm target...
+2026-02-22T19:08:50.6969700Z [INFO]: 🌀  Compiling to Wasm...
+2026-02-22T19:08:50.8003428Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 0.06s
+2026-02-22T19:08:50.8089478Z [INFO]: ⬇️  Installing wasm-bindgen...
+2026-02-22T19:08:51.1301840Z [INFO]: Optimizing wasm binaries with `wasm-opt`...
+2026-02-22T19:09:05.4563086Z [INFO]: License key is set in Cargo.toml but no LICENSE file(s) were found; Please add the LICENSE file(s) to your project directory
+2026-02-22T19:09:05.4564544Z [INFO]: ✨   Done in 14.89s
+2026-02-22T19:09:05.4565785Z [INFO]: 📦   Your wasm pkg is ready to publish at crates/json-schema-llm-wasm/pkg.
+2026-02-22T19:09:05.4598012Z [WARN]: ⚠️   There's a newer version of wasm-pack available, the new version is: 0.14.0, you are using: 0.13.1. To update, navigate to: https://rustwasm.github.io/wasm-pack/installer/
+2026-02-22T19:09:05.4627415Z ##[group]Run pnpm install --frozen-lockfile --ignore-workspace
+2026-02-22T19:09:05.4627923Z [36;1mpnpm install --frozen-lockfile --ignore-workspace[0m
+2026-02-22T19:09:05.4658842Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:09:05.4659062Z env:
+2026-02-22T19:09:05.4659232Z   CARGO_TERM_COLOR: always
+2026-02-22T19:09:05.4659466Z   RUSTFLAGS: -D warnings
+2026-02-22T19:09:05.4659683Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:09:05.4659909Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:09:05.4660101Z   CACHE_ON_FAILURE: false
+2026-02-22T19:09:05.4660347Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-02-22T19:09:05.4660632Z ##[endgroup]
+2026-02-22T19:09:05.8931238Z Lockfile is up to date, resolution step is skipped
+2026-02-22T19:09:05.9399858Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-02-22T19:09:05.9638297Z Packages: +53
+2026-02-22T19:09:05.9639427Z +++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-02-22T19:09:06.4941319Z Progress: resolved 53, reused 1, downloaded 52, added 53, done
+2026-02-22T19:09:06.5713153Z 
+2026-02-22T19:09:06.5713588Z dependencies:
+2026-02-22T19:09:06.5713900Z + json-schema-llm-wasm
+2026-02-22T19:09:06.5714060Z 
+2026-02-22T19:09:06.5714157Z devDependencies:
+2026-02-22T19:09:06.5714379Z + typescript 5.9.3
+2026-02-22T19:09:06.5714609Z + vitest 3.2.4
+2026-02-22T19:09:06.5714720Z 
+2026-02-22T19:09:06.5715518Z ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+2026-02-22T19:09:06.5716048Z │                                                                              │
+2026-02-22T19:09:06.5716598Z │   Ignored build scripts: esbuild.                                            │
+2026-02-22T19:09:06.5717234Z │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+2026-02-22T19:09:06.5717835Z │   to run scripts.                                                            │
+2026-02-22T19:09:06.5718335Z │                                                                              │
+2026-02-22T19:09:06.5718882Z ╰──────────────────────────────────────────────────────────────────────────────╯
+2026-02-22T19:09:06.5719121Z 
+2026-02-22T19:09:06.5841714Z Done in 1s using pnpm v10.10.0
+2026-02-22T19:09:06.6037329Z ##[group]Run pnpm test
+2026-02-22T19:09:06.6037591Z [36;1mpnpm test[0m
+2026-02-22T19:09:06.6069081Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:09:06.6069308Z env:
+2026-02-22T19:09:06.6069484Z   CARGO_TERM_COLOR: always
+2026-02-22T19:09:06.6069710Z   RUSTFLAGS: -D warnings
+2026-02-22T19:09:06.6069938Z   CARGO_HOME: /home/runner/.cargo
+2026-02-22T19:09:06.6070170Z   CARGO_INCREMENTAL: 0
+2026-02-22T19:09:06.6070371Z   CACHE_ON_FAILURE: false
+2026-02-22T19:09:06.6070626Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-02-22T19:09:06.6070911Z ##[endgroup]
+2026-02-22T19:09:06.9915150Z 
+2026-02-22T19:09:06.9916377Z > json-schema-llm-contract-tests@0.0.0 test /home/runner/work/json-schema-llm/json-schema-llm/tests/contract-node
+2026-02-22T19:09:06.9917447Z > vitest run
+2026-02-22T19:09:06.9917654Z 
+2026-02-22T19:09:07.3052279Z 
+2026-02-22T19:09:07.3054765Z [1m[46m RUN [49m[22m [36mv3.2.4 [39m[90m/home/runner/work/json-schema-llm/json-schema-llm/tests/contract-node[39m
+2026-02-22T19:09:07.3055931Z 
+2026-02-22T19:09:07.5597200Z  [31m❯[39m contract.test.js [2m([22m[2m41 tests[22m[2m | [22m[33m41 skipped[39m[2m)[22m[32m 11[2mms[22m[39m
+2026-02-22T19:09:07.5599013Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mallof × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5600674Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mallof × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5602288Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mallof × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5603981Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mdeep_objects × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5605933Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mdeep_objects × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5607682Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mdeep_objects × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5609474Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mdiscriminator × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5611196Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mdiscriminator × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5612959Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mdiscriminator × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5614780Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mkitchen_sink × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5616746Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mkitchen_sink × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5618490Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mkitchen_sink × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5620275Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mmaps × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5621917Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mmaps × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5623493Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mmaps × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5625313Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mopaque × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5626996Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mopaque × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5629014Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mopaque × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5630842Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mrecursive × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5632822Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mrecursive × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5634445Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22mrecursive × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5636329Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22msimple × openai-strict: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5637979Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22msimple × gemini: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5639003Z    [2m[90m↓[39m[22m convert[2m > [22menvelope structure[2m > [22msimple × claude: returns { apiVersion, schema, codec }
+2026-02-22T19:09:07.5639800Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mallof: output schema has type key
+2026-02-22T19:09:07.5640535Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mdeep_objects: output schema has type key
+2026-02-22T19:09:07.5641275Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mdiscriminator: output schema has type key
+2026-02-22T19:09:07.5641997Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mkitchen_sink: output schema has type key
+2026-02-22T19:09:07.5642686Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mmaps: output schema has type key
+2026-02-22T19:09:07.5643358Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mopaque: output schema has type key
+2026-02-22T19:09:07.5644042Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22mrecursive: output schema has type key
+2026-02-22T19:09:07.5644743Z    [2m[90m↓[39m[22m convert[2m > [22mschema output[2m > [22msimple: output schema has type key
+2026-02-22T19:09:07.5645636Z    [2m[90m↓[39m[22m convert[2m > [22mdefault options[2m > [22maccepts undefined options
+2026-02-22T19:09:07.5646274Z    [2m[90m↓[39m[22m convert[2m > [22mdefault options[2m > [22maccepts null options
+2026-02-22T19:09:07.5646920Z    [2m[90m↓[39m[22m convert[2m > [22mcamelCase options[2m > [22maccepts camelCase option keys
+2026-02-22T19:09:07.5647667Z    [2m[90m↓[39m[22m convert[2m > [22mkebab-case options[2m > [22maccepts kebab-case option keys via alias
+2026-02-22T19:09:07.5648361Z    [2m[90m↓[39m[22m rehydrate[2m > [22mround-trip: convert → rehydrate preserves data
+2026-02-22T19:09:07.5649075Z    [2m[90m↓[39m[22m rehydrate[2m > [22mrehydrate with dropped constraints → non-empty droppedConstraints
+2026-02-22T19:09:07.5649785Z    [2m[90m↓[39m[22m error handling[2m > [22mbad options type → structured error with code
+2026-02-22T19:09:07.5650441Z    [2m[90m↓[39m[22m error handling[2m > [22mbad codec type → structured error with code
+2026-02-22T19:09:07.5651034Z    [2m[90m↓[39m[22m error handling[2m > [22mbad codec version → structured error
+2026-02-22T19:09:07.5733161Z 
+2026-02-22T19:09:07.5734134Z [31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+2026-02-22T19:09:07.5734617Z 
+2026-02-22T19:09:07.5738351Z [41m[1m FAIL [22m[49m contract.test.js[2m [ contract.test.js ][22m
+2026-02-22T19:09:07.5757130Z [31m[1mError[22m: Cannot find package 'jsonschema-llm-wasm' imported from '/home/runner/work/json-schema-llm/json-schema-llm/tests/contract-node/contract.test.js'[39m
+2026-02-22T19:09:07.5758815Z [36m [2m❯[22m contract.test.js:[2m19:10[22m[39m
+2026-02-22T19:09:07.5805304Z     [90m 17| [39m
+2026-02-22T19:09:07.5807396Z     [90m 18| [39m[34mbeforeAll[39m([35masync[39m () [33m=>[39m {
+2026-02-22T19:09:07.5808635Z     [90m 19| [39m  wasm [33m=[39m [35mawait[39m [35mimport[39m([32m"jsonschema-llm-wasm"[39m)[33m;[39m
+2026-02-22T19:09:07.5810170Z     [90m   | [39m         [31m^[39m
+2026-02-22T19:09:07.5810822Z     [90m 20| [39m})[33m;[39m
+2026-02-22T19:09:07.5811267Z     [90m 21| [39m
+2026-02-22T19:09:07.5811709Z 
+2026-02-22T19:09:07.5813752Z [31m[1mCaused by: Error[22m: Failed to load url jsonschema-llm-wasm (resolved id: jsonschema-llm-wasm) in /home/runner/work/json-schema-llm/json-schema-llm/tests/contract-node/contract.test.js. Does the file exist?[39m
+2026-02-22T19:09:07.5815411Z 
+2026-02-22T19:09:07.5817611Z [90m [2m❯[22m loadAndTransform node_modules/.pnpm/vite@7.3.1/node_modules/vite/dist/node/chunks/config.js:[2m22663:33[22m[39m
+2026-02-22T19:09:07.5818546Z 
+2026-02-22T19:09:07.5819091Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+2026-02-22T19:09:07.5819462Z 
+2026-02-22T19:09:07.5820017Z [2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+2026-02-22T19:09:07.5820937Z [2m      Tests [22m [33m41 skipped[39m[90m (41)[39m
+2026-02-22T19:09:07.5821624Z [2m   Start at [22m 19:09:07
+2026-02-22T19:09:07.5822950Z [2m   Duration [22m 267ms[2m (transform 39ms, setup 0ms, collect 31ms, tests 11ms, environment 0ms, prepare 75ms)[22m
+2026-02-22T19:09:07.5823788Z 
+2026-02-22T19:09:07.5840537Z 
+2026-02-22T19:09:07.5875866Z ##[error]Error: Cannot find package 'jsonschema-llm-wasm' imported from '/home/runner/work/json-schema-llm/json-schema-llm/tests/contract-node/contract.test.js'
+ ❯ contract.test.js:19:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+Caused by: Caused by: Error: Failed to load url jsonschema-llm-wasm (resolved id: jsonschema-llm-wasm) in /home/runner/work/json-schema-llm/json-schema-llm/tests/contract-node/contract.test.js. Does the file exist?
+ ❯ loadAndTransform node_modules/.pnpm/vite@7.3.1/node_modules/vite/dist/node/chunks/config.js:22663:33
+
+
+2026-02-22T19:09:07.6800093Z  ELIFECYCLE  Test failed. See above for more details.
+2026-02-22T19:09:07.6989958Z ##[error]Process completed with exit code 1.
+2026-02-22T19:09:07.7073592Z Post job cleanup.
+2026-02-22T19:09:07.7614081Z Pruning is unnecessary.
+2026-02-22T19:09:07.7723910Z Post job cleanup.
+2026-02-22T19:09:07.8669913Z [command]/usr/bin/git version
+2026-02-22T19:09:07.8711864Z git version 2.52.0
+2026-02-22T19:09:07.8755557Z Temporarily overriding HOME='/home/runner/work/_temp/9df2e727-0103-478d-8b6c-c8257b2e1843' before making global git config changes
+2026-02-22T19:09:07.8757118Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-22T19:09:07.8761850Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/json-schema-llm/json-schema-llm
+2026-02-22T19:09:07.8796508Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-22T19:09:07.8830498Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-22T19:09:07.9062404Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-22T19:09:07.9083213Z http.https://github.com/.extraheader
+2026-02-22T19:09:07.9096968Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-02-22T19:09:07.9128367Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-22T19:09:07.9352982Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-22T19:09:07.9383799Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-22T19:09:07.9736684Z Cleaning up orphan processes
