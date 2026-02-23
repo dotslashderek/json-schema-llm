@@ -130,8 +130,8 @@ describe("LlmRoundtripEngine", () => {
       };
 
       // Pre-convert using the underlying binding
-      const { Engine } = await import("@json-schema-llm/wasi");
-      const wasiEngine = new Engine();
+      const { SchemaLlmEngine } = await import("@json-schema-llm/wasi");
+      const wasiEngine = await SchemaLlmEngine.create();
       const converted = await wasiEngine.convert(JSON.parse(SIMPLE_SCHEMA));
       wasiEngine.close();
 

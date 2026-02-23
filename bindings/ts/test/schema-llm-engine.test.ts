@@ -77,8 +77,10 @@ describe("SchemaLlmEngine", () => {
       const result = await engine.rehydrate(data, convertResult.codec, SIMPLE_SCHEMA);
 
       expect(result.apiVersion).toBeTruthy();
-      expect((result.data as Record<string, unknown>).name).toBe("Ada");
-      expect((result.data as Record<string, unknown>).age).toBe(36);
+      expect(result.data).toBeTypeOf("object");
+      expect(result.data).not.toBeNull();
+      expect(result.data).toHaveProperty("name", "Ada");
+      expect(result.data).toHaveProperty("age", 36);
     });
   });
 

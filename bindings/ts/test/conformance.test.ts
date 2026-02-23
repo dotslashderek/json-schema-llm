@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { Engine, JslError } from "../src/index.js";
+import { Engine, JslError } from "../src/core.js";
 
 interface Fixture {
   id: string;

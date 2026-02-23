@@ -14,34 +14,46 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-let _schemaCache: unknown | null = null;
-let _codecCache: unknown | null = null;
-let _originalCache: unknown | null = null;
+let _schemaCache: Record<string, unknown> | null = null;
+let _codecCache: Record<string, unknown> | null = null;
+let _originalCache: Record<string, unknown> | null = null;
 
 /** Load the LLM-compatible schema for {{ component_name }}. */
 export function schema(): Record<string, unknown> {
   if (_schemaCache === null) {
     const raw = readFileSync(join(__dirname, "..", "schemas", "{{ schema_path }}"), "utf-8");
-    _schemaCache = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error(`Invalid schema JSON in {{ schema_path }}`);
+    }
+    _schemaCache = parsed as Record<string, unknown>; // We have to assert here but we validated it
   }
-  return _schemaCache as Record<string, unknown>;
+  return _schemaCache;
 }
 
 /** Load the codec (rehydration map) for {{ component_name }}. */
 export function codec(): Record<string, unknown> {
   if (_codecCache === null) {
     const raw = readFileSync(join(__dirname, "..", "schemas", "{{ codec_path }}"), "utf-8");
-    _codecCache = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error(`Invalid codec JSON in {{ codec_path }}`);
+    }
+    _codecCache = parsed as Record<string, unknown>;
   }
-  return _codecCache as Record<string, unknown>;
+  return _codecCache;
 }
 
 /** Load the original (pre-conversion) sub-schema for {{ component_name }}. */
 export function original(): Record<string, unknown> {
   if (_originalCache === null) {
     const raw = readFileSync(join(__dirname, "..", "schemas", "{{ original_path }}"), "utf-8");
-    _originalCache = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error(`Invalid original schema JSON in {{ original_path }}`);
+    }
+    _originalCache = parsed as Record<string, unknown>;
   }
-  return _originalCache as Record<string, unknown>;
+  return _originalCache;
 }
 

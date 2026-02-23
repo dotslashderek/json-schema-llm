@@ -1,0 +1,249 @@
+﻿2026-02-22T19:18:45.0664775Z Current runner version: '2.331.0'
+2026-02-22T19:18:45.0687367Z ##[group]Runner Image Provisioner
+2026-02-22T19:18:45.0688276Z Hosted Compute Agent
+2026-02-22T19:18:45.0688851Z Version: 20260123.484
+2026-02-22T19:18:45.0689396Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-22T19:18:45.0690198Z Build Date: 2026-01-23T19:41:17Z
+2026-02-22T19:18:45.0690817Z Worker ID: {56e7bba9-b469-455d-98fd-6d770e85d4d2}
+2026-02-22T19:18:45.0691482Z Azure Region: westus
+2026-02-22T19:18:45.0692048Z ##[endgroup]
+2026-02-22T19:18:45.0693750Z ##[group]Operating System
+2026-02-22T19:18:45.0694323Z Ubuntu
+2026-02-22T19:18:45.0694922Z 24.04.3
+2026-02-22T19:18:45.0695378Z LTS
+2026-02-22T19:18:45.0695801Z ##[endgroup]
+2026-02-22T19:18:45.0696354Z ##[group]Runner Image
+2026-02-22T19:18:45.0696870Z Image: ubuntu-24.04
+2026-02-22T19:18:45.0697374Z Version: 20260201.15.1
+2026-02-22T19:18:45.0698593Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+2026-02-22T19:18:45.0699997Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+2026-02-22T19:18:45.0700933Z ##[endgroup]
+2026-02-22T19:18:45.0701967Z ##[group]GITHUB_TOKEN Permissions
+2026-02-22T19:18:45.0704034Z Contents: read
+2026-02-22T19:18:45.0704572Z Metadata: read
+2026-02-22T19:18:45.0705111Z Packages: read
+2026-02-22T19:18:45.0705564Z ##[endgroup]
+2026-02-22T19:18:45.0707577Z Secret source: Actions
+2026-02-22T19:18:45.0708262Z Prepare workflow directory
+2026-02-22T19:18:45.1101611Z Prepare all required actions
+2026-02-22T19:18:45.1157588Z Getting action download info
+2026-02-22T19:18:45.6596718Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-22T19:18:45.7530508Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-02-22T19:18:46.3335797Z Download action repository 'actions/setup-go@v5' (SHA:40f1582b2485089dde7abd97c1529aa768e1baff)
+2026-02-22T19:18:46.8795729Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-02-22T19:18:46.9574816Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-02-22T19:18:47.0843534Z Download action repository 'pnpm/action-setup@v4' (SHA:41ff72655975bd51cab0327fa583b6e92b6d3061)
+2026-02-22T19:18:47.6413418Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+2026-02-22T19:18:48.2567584Z Download action repository 'ruby/setup-ruby@v1' (SHA:09a7688d3b55cf0e976497ff046b70949eeaccfd)
+2026-02-22T19:18:48.6974092Z Download action repository 'actions/setup-dotnet@v4' (SHA:67a3573c9a986a3f9c594539f4ab511d57bb3ce9)
+2026-02-22T19:18:49.4135024Z Complete job name: WASI Wrappers (go)
+2026-02-22T19:18:49.4857241Z ##[group]Run actions/checkout@v4
+2026-02-22T19:18:49.4857807Z with:
+2026-02-22T19:18:49.4858034Z   repository: dotslashderek/json-schema-llm
+2026-02-22T19:18:49.4858446Z   token: ***
+2026-02-22T19:18:49.4858645Z   ssh-strict: true
+2026-02-22T19:18:49.4858829Z   ssh-user: git
+2026-02-22T19:18:49.4859021Z   persist-credentials: true
+2026-02-22T19:18:49.4859258Z   clean: true
+2026-02-22T19:18:49.4859444Z   sparse-checkout-cone-mode: true
+2026-02-22T19:18:49.4859674Z   fetch-depth: 1
+2026-02-22T19:18:49.4859847Z   fetch-tags: false
+2026-02-22T19:18:49.4860035Z   show-progress: true
+2026-02-22T19:18:49.4860215Z   lfs: false
+2026-02-22T19:18:49.4860378Z   submodules: false
+2026-02-22T19:18:49.4860559Z   set-safe-directory: true
+2026-02-22T19:18:49.4860951Z env:
+2026-02-22T19:18:49.4861127Z   CARGO_TERM_COLOR: always
+2026-02-22T19:18:49.4861358Z   RUSTFLAGS: -D warnings
+2026-02-22T19:18:49.4861562Z ##[endgroup]
+2026-02-22T19:18:49.5925423Z Syncing repository: dotslashderek/json-schema-llm
+2026-02-22T19:18:49.5926796Z ##[group]Getting Git version info
+2026-02-22T19:18:49.5927236Z Working directory is '/home/runner/work/json-schema-llm/json-schema-llm'
+2026-02-22T19:18:49.5927833Z [command]/usr/bin/git version
+2026-02-22T19:18:49.6000812Z git version 2.52.0
+2026-02-22T19:18:49.6026370Z ##[endgroup]
+2026-02-22T19:18:49.6039562Z Temporarily overriding HOME='/home/runner/work/_temp/cef3f5f4-db2f-4137-b96d-ea49a6477134' before making global git config changes
+2026-02-22T19:18:49.6040474Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-22T19:18:49.6045001Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/json-schema-llm/json-schema-llm
+2026-02-22T19:18:49.6081649Z Deleting the contents of '/home/runner/work/json-schema-llm/json-schema-llm'
+2026-02-22T19:18:49.6085189Z ##[group]Initializing the repository
+2026-02-22T19:18:49.6089034Z [command]/usr/bin/git init /home/runner/work/json-schema-llm/json-schema-llm
+2026-02-22T19:18:49.6196734Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-02-22T19:18:49.6197776Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-02-22T19:18:49.6198568Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-02-22T19:18:49.6198973Z hint: call:
+2026-02-22T19:18:49.6199147Z hint:
+2026-02-22T19:18:49.6199418Z hint: 	git config --global init.defaultBranch <name>
+2026-02-22T19:18:49.6199891Z hint:
+2026-02-22T19:18:49.6200420Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-02-22T19:18:49.6201189Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-02-22T19:18:49.6201571Z hint:
+2026-02-22T19:18:49.6201752Z hint: 	git branch -m <name>
+2026-02-22T19:18:49.6202168Z hint:
+2026-02-22T19:18:49.6202968Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-02-22T19:18:49.6204211Z Initialized empty Git repository in /home/runner/work/json-schema-llm/json-schema-llm/.git/
+2026-02-22T19:18:49.6214157Z [command]/usr/bin/git remote add origin https://github.com/dotslashderek/json-schema-llm
+2026-02-22T19:18:49.6246015Z ##[endgroup]
+2026-02-22T19:18:49.6246432Z ##[group]Disabling automatic garbage collection
+2026-02-22T19:18:49.6250071Z [command]/usr/bin/git config --local gc.auto 0
+2026-02-22T19:18:49.6277027Z ##[endgroup]
+2026-02-22T19:18:49.6277418Z ##[group]Setting up auth
+2026-02-22T19:18:49.6284054Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-22T19:18:49.6311990Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-22T19:18:49.6634795Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-22T19:18:49.6666598Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-22T19:18:49.6884403Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-22T19:18:49.6914281Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-22T19:18:49.7133877Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-02-22T19:18:49.7166767Z ##[endgroup]
+2026-02-22T19:18:49.7167209Z ##[group]Fetching the repository
+2026-02-22T19:18:49.7175361Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +623f5cd2f80a146a63c633f840c8eb1c3044bd68:refs/remotes/pull/234/merge
+2026-02-22T19:18:50.2906765Z From https://github.com/dotslashderek/json-schema-llm
+2026-02-22T19:18:50.2907512Z  * [new ref]         623f5cd2f80a146a63c633f840c8eb1c3044bd68 -> pull/234/merge
+2026-02-22T19:18:50.2940452Z ##[endgroup]
+2026-02-22T19:18:50.2940949Z ##[group]Determining the checkout info
+2026-02-22T19:18:50.2943014Z ##[endgroup]
+2026-02-22T19:18:50.2947897Z [command]/usr/bin/git sparse-checkout disable
+2026-02-22T19:18:50.2989781Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-02-22T19:18:50.3014943Z ##[group]Checking out the ref
+2026-02-22T19:18:50.3018816Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/234/merge
+2026-02-22T19:18:50.3699950Z Note: switching to 'refs/remotes/pull/234/merge'.
+2026-02-22T19:18:50.3701825Z 
+2026-02-22T19:18:50.3702196Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-02-22T19:18:50.3703211Z changes and commit them, and you can discard any commits you make in this
+2026-02-22T19:18:50.3704017Z state without impacting any branches by switching back to a branch.
+2026-02-22T19:18:50.3704478Z 
+2026-02-22T19:18:50.3704871Z If you want to create a new branch to retain commits you create, you may
+2026-02-22T19:18:50.3705602Z do so (now or later) by using -c with the switch command. Example:
+2026-02-22T19:18:50.3706048Z 
+2026-02-22T19:18:50.3706217Z   git switch -c <new-branch-name>
+2026-02-22T19:18:50.3706503Z 
+2026-02-22T19:18:50.3706657Z Or undo this operation with:
+2026-02-22T19:18:50.3706917Z 
+2026-02-22T19:18:50.3707052Z   git switch -
+2026-02-22T19:18:50.3707251Z 
+2026-02-22T19:18:50.3707610Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-02-22T19:18:50.3708120Z 
+2026-02-22T19:18:50.3708722Z HEAD is now at 623f5cd Merge 4b7a769fd715d9fe984120aef2d5efa355e40c42 into c5ee54d624a5aa0194aa1e176158a8688ed5b84b
+2026-02-22T19:18:50.3717571Z ##[endgroup]
+2026-02-22T19:18:50.3765162Z [command]/usr/bin/git log -1 --format=%H
+2026-02-22T19:18:50.3789931Z 623f5cd2f80a146a63c633f840c8eb1c3044bd68
+2026-02-22T19:18:50.3995380Z ##[group]Run actions/download-artifact@v4
+2026-02-22T19:18:50.3995676Z with:
+2026-02-22T19:18:50.3995848Z   name: wasi-binary
+2026-02-22T19:18:50.3996056Z   path: target/wasm32-wasip1/release
+2026-02-22T19:18:50.3996302Z   merge-multiple: false
+2026-02-22T19:18:50.3996524Z   repository: dotslashderek/json-schema-llm
+2026-02-22T19:18:50.3996790Z   run-id: 22283586893
+2026-02-22T19:18:50.3996964Z env:
+2026-02-22T19:18:50.3997127Z   CARGO_TERM_COLOR: always
+2026-02-22T19:18:50.3997332Z   RUSTFLAGS: -D warnings
+2026-02-22T19:18:50.3997534Z ##[endgroup]
+2026-02-22T19:18:50.5926352Z Downloading single artifact
+2026-02-22T19:18:50.8527678Z Preparing to download the following artifacts:
+2026-02-22T19:18:50.8528880Z - wasi-binary (ID: 5608763540, Size: 746519, Expected Digest: sha256:7b6011827460fb0e55881cc1be443299f3704f501de6afb2f6d04de5720da65b)
+2026-02-22T19:18:51.0221470Z Redirecting to blob download url: https://productionresultssa10.blob.core.windows.net/actions-results/c04189ee-3383-4a61-ae31-5529203c876c/workflow-job-run-26e30f5b-2bb6-516a-b78f-7348250594ee/artifacts/b6087ab9c20e5e0602b2ff6f0a4b35db51ea2a8ea5c9e87f2f9067843819f74b.zip
+2026-02-22T19:18:51.0224514Z Starting download of artifact to: /home/runner/work/json-schema-llm/json-schema-llm/target/wasm32-wasip1/release
+2026-02-22T19:18:51.2881822Z (node:2232) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-02-22T19:18:51.2883993Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-02-22T19:18:51.6588227Z SHA256 digest of downloaded artifact is 7b6011827460fb0e55881cc1be443299f3704f501de6afb2f6d04de5720da65b
+2026-02-22T19:18:51.6589521Z Artifact download completed successfully.
+2026-02-22T19:18:51.6590033Z Total of 1 artifact(s) downloaded
+2026-02-22T19:18:51.6596055Z Download artifact has finished successfully
+2026-02-22T19:18:51.6739640Z ##[group]Run actions/setup-go@v5
+2026-02-22T19:18:51.6739914Z with:
+2026-02-22T19:18:51.6740090Z   go-version: 1.22
+2026-02-22T19:18:51.6740290Z   check-latest: false
+2026-02-22T19:18:51.6740602Z   token: ***
+2026-02-22T19:18:51.6740779Z   cache: true
+2026-02-22T19:18:51.6740955Z env:
+2026-02-22T19:18:51.6741147Z   CARGO_TERM_COLOR: always
+2026-02-22T19:18:51.6741372Z   RUSTFLAGS: -D warnings
+2026-02-22T19:18:51.6741766Z ##[endgroup]
+2026-02-22T19:18:51.8353312Z Setup go version spec 1.22
+2026-02-22T19:18:51.8599813Z Found in cache @ /opt/hostedtoolcache/go/1.22.12/x64
+2026-02-22T19:18:51.8605674Z Added go to the path
+2026-02-22T19:18:51.8609992Z Successfully set up Go version 1.22
+2026-02-22T19:18:52.3466388Z [command]/opt/hostedtoolcache/go/1.22.12/x64/bin/go env GOMODCACHE
+2026-02-22T19:18:52.3508504Z [command]/opt/hostedtoolcache/go/1.22.12/x64/bin/go env GOCACHE
+2026-02-22T19:18:52.3614730Z /home/runner/go/pkg/mod
+2026-02-22T19:18:52.3617297Z /home/runner/.cache/go-build
+2026-02-22T19:18:52.3666072Z ##[warning]Restore cache failed: Dependencies file is not found in /home/runner/work/json-schema-llm/json-schema-llm. Supported file pattern: go.sum
+2026-02-22T19:18:52.3696280Z go version go1.22.12 linux/amd64
+2026-02-22T19:18:52.3696640Z 
+2026-02-22T19:18:52.3697138Z ##[group]go env
+2026-02-22T19:18:52.4996187Z GO111MODULE=''
+2026-02-22T19:18:52.4996666Z GOARCH='amd64'
+2026-02-22T19:18:52.4997012Z GOBIN=''
+2026-02-22T19:18:52.4997268Z GOCACHE='/home/runner/.cache/go-build'
+2026-02-22T19:18:52.4997576Z GOENV='/home/runner/.config/go/env'
+2026-02-22T19:18:52.4997824Z GOEXE=''
+2026-02-22T19:18:52.4998006Z GOEXPERIMENT=''
+2026-02-22T19:18:52.4998190Z GOFLAGS=''
+2026-02-22T19:18:52.4998367Z GOHOSTARCH='amd64'
+2026-02-22T19:18:52.4998562Z GOHOSTOS='linux'
+2026-02-22T19:18:52.4998748Z GOINSECURE=''
+2026-02-22T19:18:52.4998948Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-02-22T19:18:52.4999210Z GONOPROXY=''
+2026-02-22T19:18:52.4999385Z GONOSUMDB=''
+2026-02-22T19:18:52.4999546Z GOOS='linux'
+2026-02-22T19:18:52.4999740Z GOPATH='/home/runner/go'
+2026-02-22T19:18:52.4999951Z GOPRIVATE=''
+2026-02-22T19:18:52.5000183Z GOPROXY='https://proxy.golang.org,direct'
+2026-02-22T19:18:52.5000502Z GOROOT='/opt/hostedtoolcache/go/1.22.12/x64'
+2026-02-22T19:18:52.5000790Z GOSUMDB='sum.golang.org'
+2026-02-22T19:18:52.5000994Z GOTMPDIR=''
+2026-02-22T19:18:52.5001192Z GOTOOLCHAIN='auto'
+2026-02-22T19:18:52.5001508Z GOTOOLDIR='/opt/hostedtoolcache/go/1.22.12/x64/pkg/tool/linux_amd64'
+2026-02-22T19:18:52.5001849Z GOVCS=''
+2026-02-22T19:18:52.5028938Z GOVERSION='go1.22.12'
+2026-02-22T19:18:52.5029373Z GCCGO='gccgo'
+2026-02-22T19:18:52.5029687Z GOAMD64='v1'
+2026-02-22T19:18:52.5029957Z AR='ar'
+2026-02-22T19:18:52.5030208Z CC='gcc'
+2026-02-22T19:18:52.5030462Z CXX='g++'
+2026-02-22T19:18:52.5030732Z CGO_ENABLED='1'
+2026-02-22T19:18:52.5031043Z GOMOD='/dev/null'
+2026-02-22T19:18:52.5031357Z GOWORK=''
+2026-02-22T19:18:52.5031674Z CGO_CFLAGS='-O2 -g'
+2026-02-22T19:18:52.5031981Z CGO_CPPFLAGS=''
+2026-02-22T19:18:52.5032541Z CGO_CXXFLAGS='-O2 -g'
+2026-02-22T19:18:52.5032890Z CGO_FFLAGS='-O2 -g'
+2026-02-22T19:18:52.5033219Z CGO_LDFLAGS='-O2 -g'
+2026-02-22T19:18:52.5033586Z PKG_CONFIG='pkg-config'
+2026-02-22T19:18:52.5034693Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build1274504811=/tmp/go-build -gno-record-gcc-switches'
+2026-02-22T19:18:52.5035733Z 
+2026-02-22T19:18:52.5036283Z ##[endgroup]
+2026-02-22T19:18:52.5110984Z ##[group]Run cp target/wasm32-wasip1/release/json_schema_llm_wasi.wasm bindings/go/wasm/
+2026-02-22T19:18:52.5111671Z [36;1mcp target/wasm32-wasip1/release/json_schema_llm_wasi.wasm bindings/go/wasm/[0m
+2026-02-22T19:18:52.5147887Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:18:52.5148160Z env:
+2026-02-22T19:18:52.5148337Z   CARGO_TERM_COLOR: always
+2026-02-22T19:18:52.5148575Z   RUSTFLAGS: -D warnings
+2026-02-22T19:18:52.5148788Z ##[endgroup]
+2026-02-22T19:18:52.5280145Z ##[group]Run go test -v ./...
+2026-02-22T19:18:52.5280462Z [36;1mgo test -v ./...[0m
+2026-02-22T19:18:52.5308780Z shell: /usr/bin/bash -e {0}
+2026-02-22T19:18:52.5309022Z env:
+2026-02-22T19:18:52.5309196Z   CARGO_TERM_COLOR: always
+2026-02-22T19:18:52.5309425Z   RUSTFLAGS: -D warnings
+2026-02-22T19:18:52.5309634Z ##[endgroup]
+2026-02-22T19:18:52.6023764Z go: downloading github.com/tetratelabs/wazero v1.8.2
+2026-02-22T19:18:55.0295649Z ##[error]jsl.go:23:2: no required module provides package github.com/dotslashderek/jsonschema-llm/bindings/go/wasm; to add it:
+2026-02-22T19:18:55.0297352Z 	go get github.com/dotslashderek/jsonschema-llm/bindings/go/wasm
+2026-02-22T19:18:55.0299274Z ##[error]Process completed with exit code 1.
+2026-02-22T19:18:55.0433790Z Post job cleanup.
+2026-02-22T19:18:55.1351661Z [command]/usr/bin/git version
+2026-02-22T19:18:55.1392731Z git version 2.52.0
+2026-02-22T19:18:55.1433514Z Temporarily overriding HOME='/home/runner/work/_temp/9f32bc90-6999-4dee-96a0-bf9e6d13abaa' before making global git config changes
+2026-02-22T19:18:55.1434753Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-22T19:18:55.1438777Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/json-schema-llm/json-schema-llm
+2026-02-22T19:18:55.1471789Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-22T19:18:55.1502968Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-22T19:18:55.1729125Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-22T19:18:55.1748951Z http.https://github.com/.extraheader
+2026-02-22T19:18:55.1762028Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-02-22T19:18:55.1794000Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-22T19:18:55.2013560Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-22T19:18:55.2043477Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-22T19:18:55.2364106Z Cleaning up orphan processes

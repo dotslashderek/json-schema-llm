@@ -5,7 +5,7 @@
  * Engine bindings and adds the formatter/transport orchestration layer.
  */
 
-import { Engine as WasiEngine, type ConvertResult } from "@json-schema-llm/wasi";
+import { SchemaLlmEngine, type ConvertResult } from "@json-schema-llm/wasi";
 import Ajv2020Module from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";
 import {
@@ -42,14 +42,23 @@ import type { ProviderConfig, RoundtripResult } from "./types.js";
  * ```
  */
 export class LlmRoundtripEngine {
-  private readonly wasi: WasiEngine;
+  private wasi: SchemaLlmEngine | null = null;
+  private readonly wasmPath?: string;
 
   /**
    * @param wasmPath - Optional explicit path to the WASI binary. Falls back to
    *                   JSL_WASM_PATH env var → import.meta.resolve → repo-relative.
    */
   constructor(wasmPath?: string) {
-    this.wasi = new WasiEngine(wasmPath);
+    this.wasmPath = wasmPath;
+  }
+
+  /** Retrieve the lazy-initialized engine facade. */
+  private async getWasi(): Promise<SchemaLlmEngine> {
+    if (!this.wasi) {
+      this.wasi = await SchemaLlmEngine.create({ wasmPath: this.wasmPath });
+    }
+    return this.wasi;
   }
 
   /**
@@ -73,7 +82,8 @@ export class LlmRoundtripEngine {
     let convertResult: ConvertResult;
     try {
       const schema = JSON.parse(schemaJson);
-      convertResult = await this.wasi.convert(schema);
+      const wasi = await this.getWasi();
+      convertResult = await wasi.convert(schema);
     } catch (e) {
       if (e instanceof SyntaxError) {
         throw new SchemaConversionError(`Invalid JSON schema: ${e.message}`);
@@ -138,7 +148,8 @@ export class LlmRoundtripEngine {
     let warnings: string[] = [];
     try {
       const schema = JSON.parse(schemaJson);
-      const rehydrateResult = await this.wasi.rehydrate(
+      const wasi = await this.getWasi();
+      const rehydrateResult = await wasi.rehydrate(
         JSON.parse(content),
         JSON.parse(codecJson),
         schema,
@@ -194,6 +205,9 @@ export class LlmRoundtripEngine {
 
   /** Release WASM module and free resources. */
   close(): void {
-    this.wasi.close();
+    if (this.wasi) {
+      this.wasi.close();
+      this.wasi = null;
+    }
   }
 }

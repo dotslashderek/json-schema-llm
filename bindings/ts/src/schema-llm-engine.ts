@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Engine } from "./index.js";
+import { Engine } from "./core.js";
 import type {
   ConvertOptions,
   ConvertResult,
