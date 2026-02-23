@@ -2,8 +2,16 @@
   "name": "@json-schema-llm/wasi",
   "version": "0.1.0",
   "description": "WASI-backed wrapper for json-schema-llm",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist/",
+    "wasm/"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run"
