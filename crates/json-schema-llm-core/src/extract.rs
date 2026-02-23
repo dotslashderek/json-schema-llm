@@ -589,10 +589,7 @@ impl<'a> DependencyGraph<'a> {
     /// DFS from each root to collect direct `$ref` edges and resolve node values.
     /// Nodes already visited by a previous root's DFS are skipped (shared dep
     /// short-circuit).
-    pub fn build(
-        schema: &'a Value,
-        _options: &ExtractOptions,
-    ) -> Result<DependencyGraph<'a>, ConvertError> {
+    pub fn build(schema: &'a Value) -> Result<DependencyGraph<'a>, ConvertError> {
         let resolver = crate::resolver::ResolverEngine::new(schema)?;
         let component_pointers = list_components(schema);
 
@@ -689,6 +686,12 @@ impl<'a> DependencyGraph<'a> {
                 let dep_ptr = &self.pointers[dep_id];
                 let key = pointer_to_key(dep_ptr, &deps);
                 deps.insert(dep_ptr.clone(), (key, (*val).clone(), base.clone()));
+            } else {
+                debug_assert!(
+                    false,
+                    "Dependency node for ID {} was included in closure but never resolved",
+                    dep_id
+                );
             }
         }
 
@@ -1633,7 +1636,7 @@ mod tests {
                 "C": { "type": "string" }
             }
         });
-        let graph = DependencyGraph::build(&schema, &opts()).unwrap();
+        let graph = DependencyGraph::build(&schema).unwrap();
         // A depends on B; B and C have no deps.
         let a_result = graph.extract("#/$defs/A", &opts()).unwrap();
         assert_eq!(a_result.dependency_count, 1);
@@ -1661,7 +1664,7 @@ mod tests {
                 "C": { "type": "string" }
             }
         });
-        let graph = DependencyGraph::build(&schema, &opts()).unwrap();
+        let graph = DependencyGraph::build(&schema).unwrap();
         let pointers = list_components(&schema);
 
         for pointer in &pointers {
@@ -1701,7 +1704,7 @@ mod tests {
             }
         });
         // Must not panic or infinite loop
-        let graph = DependencyGraph::build(&schema, &opts()).unwrap();
+        let graph = DependencyGraph::build(&schema).unwrap();
         let result = graph.extract("#/$defs/A", &opts()).unwrap();
         assert!(result.dependency_count >= 1);
         assert!(result.missing_refs.is_empty());
@@ -1722,7 +1725,7 @@ mod tests {
                 }
             }
         });
-        let graph = DependencyGraph::build(&schema, &opts()).unwrap();
+        let graph = DependencyGraph::build(&schema).unwrap();
         let result = graph.extract("#/components/schemas/Pet", &opts()).unwrap();
         assert_eq!(result.dependency_count, 1);
         assert!(result.schema["$defs"]["Tag"].is_object());
@@ -1742,7 +1745,7 @@ mod tests {
                 "C": { "type": "string" }
             }
         });
-        let graph = DependencyGraph::build(&schema, &opts()).unwrap();
+        let graph = DependencyGraph::build(&schema).unwrap();
         let a = graph.extract("#/$defs/A", &opts()).unwrap();
         let b = graph.extract("#/$defs/B", &opts()).unwrap();
         assert_eq!(a.dependency_count, 1);
