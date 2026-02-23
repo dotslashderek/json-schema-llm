@@ -8,7 +8,7 @@
  * cached compiled module. Engine itself is NOT thread-safe.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { WASI } from "node:wasi";
 import { join } from "node:path";
 
@@ -18,7 +18,7 @@ const STATUS_ERROR = 1;
 const EXPECTED_ABI_VERSION = 1;
 
 const DEFAULT_WASM_PATH = join(
-  __dirname,
+  import.meta.dirname,
   "..",
   "..",
   "..",
@@ -304,3 +304,6 @@ export class Engine {
     this.compiledModule = null;
   }
 }
+
+export { SchemaLlmEngine } from "./schema-llm-engine.js";
+export type { SchemaLlmEngineOptions } from "./schema-llm-engine.js";
