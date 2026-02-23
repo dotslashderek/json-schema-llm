@@ -71,9 +71,9 @@ func TestConformance_Convert(t *testing.T) {
 
 	for _, fx := range convertSuite.Fixtures {
 		t.Run(fx.ID, func(t *testing.T) {
-			eng, err := New()
+			eng, err := NewSchemaLlmEngine()
 			if err != nil {
-				t.Fatalf("New() failed: %v", err)
+				t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 			}
 			defer eng.Close()
 
@@ -126,9 +126,9 @@ func TestConformance_Roundtrip(t *testing.T) {
 
 	for _, fx := range roundtripSuite.Fixtures {
 		t.Run(fx.ID, func(t *testing.T) {
-			eng, err := New()
+			eng, err := NewSchemaLlmEngine()
 			if err != nil {
-				t.Fatalf("New() failed: %v", err)
+				t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 			}
 			defer eng.Close()
 
@@ -235,9 +235,9 @@ func TestConformance_RehydrateError(t *testing.T) {
 
 	for _, fx := range errorSuite.Fixtures {
 		t.Run(fx.ID, func(t *testing.T) {
-			eng, err := New()
+			eng, err := NewSchemaLlmEngine()
 			if err != nil {
-				t.Fatalf("New() failed: %v", err)
+				t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 			}
 			defer eng.Close()
 
@@ -353,9 +353,9 @@ func TestConformance_ListComponents(t *testing.T) {
 
 	for _, fx := range listSuite.Fixtures {
 		t.Run(fx.ID, func(t *testing.T) {
-			eng, err := New()
+			eng, err := NewSchemaLlmEngine()
 			if err != nil {
-				t.Fatalf("New() failed: %v", err)
+				t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 			}
 			defer eng.Close()
 
@@ -405,9 +405,9 @@ func TestConformance_ExtractComponent(t *testing.T) {
 
 	for _, fx := range extractSuite.Fixtures {
 		t.Run(fx.ID, func(t *testing.T) {
-			eng, err := New()
+			eng, err := NewSchemaLlmEngine()
 			if err != nil {
-				t.Fatalf("New() failed: %v", err)
+				t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 			}
 			defer eng.Close()
 
@@ -486,9 +486,9 @@ func TestConformance_ConvertAllComponents(t *testing.T) {
 
 	for _, fx := range convertAllSuite.Fixtures {
 		t.Run(fx.ID, func(t *testing.T) {
-			eng, err := New()
+			eng, err := NewSchemaLlmEngine()
 			if err != nil {
-				t.Fatalf("New() failed: %v", err)
+				t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 			}
 			defer eng.Close()
 

@@ -7,9 +7,9 @@ import (
 
 // TestConvertSimple verifies basic schema conversion succeeds.
 func TestConvertSimple(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -47,9 +47,9 @@ func TestConvertSimple(t *testing.T) {
 // Note: The WASI binary requires all option fields when target is specified,
 // so we use nil (defaults) here. Full options are tested separately.
 func TestConvertWithOptions(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -72,9 +72,9 @@ func TestConvertWithOptions(t *testing.T) {
 
 // TestConvertError verifies that invalid JSON input returns a structured error.
 func TestConvertError(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -98,9 +98,9 @@ func TestConvertError(t *testing.T) {
 
 // TestRoundtrip verifies convert → rehydrate produces valid data.
 func TestRoundtrip(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -150,9 +150,9 @@ func TestRoundtrip(t *testing.T) {
 
 // TestRehydrateError verifies rehydrate with invalid codec returns error.
 func TestRehydrateError(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -167,9 +167,9 @@ func TestRehydrateError(t *testing.T) {
 
 // TestMultipleCalls verifies the engine can handle sequential calls.
 func TestMultipleCalls(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -193,9 +193,9 @@ func TestMultipleCalls(t *testing.T) {
 
 // TestRealWorldSchema tests with a more complex nested schema.
 func TestRealWorldSchema(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -284,9 +284,9 @@ func TestRealWorldSchema(t *testing.T) {
 
 // TestListComponents verifies listing extractable components.
 func TestListComponents(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -312,9 +312,9 @@ func TestListComponents(t *testing.T) {
 
 // TestListComponentsEmpty verifies empty schema returns no components.
 func TestListComponentsEmpty(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -330,9 +330,9 @@ func TestListComponentsEmpty(t *testing.T) {
 
 // TestExtractComponent verifies extracting a single component.
 func TestExtractComponent(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -365,9 +365,9 @@ func TestExtractComponent(t *testing.T) {
 
 // TestExtractComponentError verifies missing pointer returns error.
 func TestExtractComponentError(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 
@@ -385,9 +385,9 @@ func TestExtractComponentError(t *testing.T) {
 
 // TestConvertAllComponents verifies batch conversion.
 func TestConvertAllComponents(t *testing.T) {
-	eng, err := New()
+	eng, err := NewSchemaLlmEngine()
 	if err != nil {
-		t.Fatalf("New() failed: %v", err)
+		t.Fatalf("NewSchemaLlmEngine() failed: %v", err)
 	}
 	defer eng.Close()
 

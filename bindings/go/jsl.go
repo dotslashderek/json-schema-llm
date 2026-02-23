@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/dotslashderek/json-schema-llm/bindings/go/wasm"
 	"github.com/tetratelabs/wazero"
@@ -113,17 +114,51 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("jsl error [%s]: %s", e.Code, e.Message)
 }
 
-// Engine wraps a wazero runtime and compiled WASI module.
-// Create with New(), use Convert/Rehydrate, and defer Close().
-type Engine struct {
+// Option configures a SchemaLlmEngine.
+type Option func(*engineConfig)
+
+type engineConfig struct {
+	wasmPath string
+}
+
+// WithWasmPath sets an explicit path to the WASI binary,
+// overriding both the JSL_WASM_PATH env var and the embedded binary.
+func WithWasmPath(path string) Option {
+	return func(c *engineConfig) {
+		c.wasmPath = path
+	}
+}
+
+// SchemaLlmEngine wraps a wazero runtime and compiled WASI module.
+// Create with NewSchemaLlmEngine(), use Convert/Rehydrate, and defer Close().
+//
+// Concurrency: Each SchemaLlmEngine owns its own wazero Runtime and compiled Module.
+// Each call creates a fresh module instance. Engines are NOT thread-safe —
+// callers must synchronize access or create per-goroutine instances.
+type SchemaLlmEngine struct {
 	runtime     wazero.Runtime
 	mod         wazero.CompiledModule
 	ctx         context.Context
 	abiVerified bool
 }
 
-// New creates a new Engine by compiling the embedded WASI binary.
-func New() (*Engine, error) {
+// NewSchemaLlmEngine creates a new SchemaLlmEngine by compiling the WASI binary.
+//
+// WASM resolution cascade:
+//  1. Explicit path via WithWasmPath option
+//  2. JSL_WASM_PATH environment variable
+//  3. Embedded binary (go:embed, default)
+func NewSchemaLlmEngine(opts ...Option) (*SchemaLlmEngine, error) {
+	cfg := &engineConfig{}
+	for _, o := range opts {
+		o(cfg)
+	}
+
+	wasmBytes, err := resolveWasm(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx := context.Background()
 	rt := wazero.NewRuntime(ctx)
 
@@ -133,26 +168,51 @@ func New() (*Engine, error) {
 		return nil, fmt.Errorf("wasi init: %w", err)
 	}
 
-	compiled, err := rt.CompileModule(ctx, wasm.Binary)
+	compiled, err := rt.CompileModule(ctx, wasmBytes)
 	if err != nil {
 		rt.Close(ctx)
 		return nil, fmt.Errorf("compile wasm: %w", err)
 	}
 
-	return &Engine{
+	return &SchemaLlmEngine{
 		runtime: rt,
 		mod:     compiled,
 		ctx:     ctx,
 	}, nil
 }
 
+// resolveWasm resolves the WASM binary using the cascade:
+// explicit path → JSL_WASM_PATH → embedded binary.
+func resolveWasm(cfg *engineConfig) ([]byte, error) {
+	// Tier 1: Explicit path
+	if cfg.wasmPath != "" {
+		data, err := os.ReadFile(cfg.wasmPath)
+		if err != nil {
+			return nil, fmt.Errorf("wasm not found at explicit path %q: %w", cfg.wasmPath, err)
+		}
+		return data, nil
+	}
+
+	// Tier 2: Environment variable
+	if envPath := os.Getenv("JSL_WASM_PATH"); envPath != "" {
+		data, err := os.ReadFile(envPath)
+		if err != nil {
+			return nil, fmt.Errorf("wasm not found at JSL_WASM_PATH=%q: %w", envPath, err)
+		}
+		return data, nil
+	}
+
+	// Tier 3: Embedded binary (default)
+	return wasm.Binary, nil
+}
+
 // Close releases all wazero resources.
-func (e *Engine) Close() error {
+func (e *SchemaLlmEngine) Close() error {
 	return e.runtime.Close(e.ctx)
 }
 
 // Convert transforms a JSON Schema into an LLM-compatible structured output schema.
-func (e *Engine) Convert(schema any, opts *ConvertOptions) (*ConvertResult, error) {
+func (e *SchemaLlmEngine) Convert(schema any, opts *ConvertOptions) (*ConvertResult, error) {
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return nil, fmt.Errorf("marshal schema: %w", err)
@@ -181,7 +241,7 @@ func (e *Engine) Convert(schema any, opts *ConvertOptions) (*ConvertResult, erro
 }
 
 // Rehydrate restores LLM output back to the original schema shape.
-func (e *Engine) Rehydrate(data any, codec any, schema any) (*RehydrateResult, error) {
+func (e *SchemaLlmEngine) Rehydrate(data any, codec any, schema any) (*RehydrateResult, error) {
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("marshal data: %w", err)
@@ -208,7 +268,7 @@ func (e *Engine) Rehydrate(data any, codec any, schema any) (*RehydrateResult, e
 }
 
 // ListComponents returns all extractable component JSON Pointers in a schema.
-func (e *Engine) ListComponents(schema any) (*ListComponentsResult, error) {
+func (e *SchemaLlmEngine) ListComponents(schema any) (*ListComponentsResult, error) {
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return nil, fmt.Errorf("marshal schema: %w", err)
@@ -227,7 +287,7 @@ func (e *Engine) ListComponents(schema any) (*ListComponentsResult, error) {
 }
 
 // ExtractComponent extracts a single component from a schema by JSON Pointer.
-func (e *Engine) ExtractComponent(schema any, pointer string, opts *ExtractOptions) (*ExtractResult, error) {
+func (e *SchemaLlmEngine) ExtractComponent(schema any, pointer string, opts *ExtractOptions) (*ExtractResult, error) {
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return nil, fmt.Errorf("marshal schema: %w", err)
@@ -258,7 +318,7 @@ func (e *Engine) ExtractComponent(schema any, pointer string, opts *ExtractOptio
 }
 
 // ConvertAllComponents converts a schema and all its discoverable components in one call.
-func (e *Engine) ConvertAllComponents(schema any, convertOpts *ConvertOptions, extractOpts *ExtractOptions) (*ConvertAllResult, error) {
+func (e *SchemaLlmEngine) ConvertAllComponents(schema any, convertOpts *ConvertOptions, extractOpts *ExtractOptions) (*ConvertAllResult, error) {
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return nil, fmt.Errorf("marshal schema: %w", err)
@@ -298,7 +358,7 @@ func (e *Engine) ConvertAllComponents(schema any, convertOpts *ConvertOptions, e
 
 // callJsl executes a WASI export function following the JslResult protocol:
 // alloc → write → call → read result → parse → free.
-func (e *Engine) callJsl(funcName string, jsonArgs ...[]byte) ([]byte, error) {
+func (e *SchemaLlmEngine) callJsl(funcName string, jsonArgs ...[]byte) ([]byte, error) {
 	// Instantiate a fresh module per call (wazero modules are single-use for WASI)
 	mod, err := e.runtime.InstantiateModule(e.ctx, e.mod, wazero.NewModuleConfig())
 	if err != nil {
