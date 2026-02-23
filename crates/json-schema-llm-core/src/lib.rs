@@ -251,7 +251,7 @@ pub fn convert_all_components(
     }
 
     // Step 3: Build global dependency graph (single O(M) pass).
-    let graph = extract::DependencyGraph::build(schema, extract_options)?;
+    let graph = extract::DependencyGraph::build(schema)?;
 
     // Step 4: Enumerate and process each component — best-effort.
     let pointers = list_components(schema);
