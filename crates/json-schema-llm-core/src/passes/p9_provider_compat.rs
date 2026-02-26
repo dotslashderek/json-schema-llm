@@ -633,21 +633,10 @@ impl CompatVisitor<'_> {
                         ),
                     });
 
-                    // If only 1 branch remains, unwrap the anyOf/oneOf
-                    if let Some(arr) = schema.get(*keyword).and_then(|v| v.as_array()) {
-                        if arr.len() == 1 {
-                            let sole = arr[0].clone();
-                            if let Some(obj) = schema.as_object_mut() {
-                                obj.remove(*keyword);
-                                // Merge the sole variant's keys into the parent
-                                if let Some(sole_obj) = sole.as_object() {
-                                    for (k, v) in sole_obj {
-                                        obj.insert(k.clone(), v.clone());
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    // We no longer unwrap 1-element anyOf/oneOf arrays per review feedback:
+                    // Blindly merging a sole variant's keys into the parent can destructively
+                    // overwrite the parent's existing constraints (e.g. `required`, `properties`).
+                    // A 1-element union is valid JSON schema anyway.
                 }
             }
         }
@@ -887,32 +876,12 @@ fn is_bare_required_only(v: &Value) -> bool {
         return false;
     }
 
-    // Must NOT have structural/constraining keywords
-    const STRUCTURAL: &[&str] = &[
-        "type",
-        "properties",
-        "additionalProperties",
-        "items",
-        "enum",
-        "const",
-        "anyOf",
-        "oneOf",
-        "allOf",
-        "not",
-        "if",
-        "then",
-        "else",
-        "$ref",
-        "patternProperties",
-    ];
-
     for key in obj.keys() {
         let k = key.as_str();
-        if k == "required" || k == "description" || k == "title" || k == "$comment" {
-            continue; // allowed metadata
-        }
-        if STRUCTURAL.contains(&k) {
-            return false; // has structural keywords → not bare
+        // Allow ONLY `required` and strictly non-constraining metadata.
+        // Any other keyword (including unknown ones) disqualifies it from being "bare".
+        if !["required", "description", "title", "$comment", "$id", "$anchor"].contains(&k) {
+            return false;
         }
     }
 
