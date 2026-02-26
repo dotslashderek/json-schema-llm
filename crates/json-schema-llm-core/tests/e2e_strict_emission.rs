@@ -22,8 +22,10 @@ use std::path::Path;
 // NOTE: `$id` is intentionally EXCLUDED — OpenAI uses it for schema naming
 // and it's valid in strict mode output.
 //
-// NOTE: `$ref` is tracked separately because the pipeline soft-fails on
-// unresolvable external references, leaving dangling `$ref` values.
+// `$ref` is included because the pipeline fully resolves all internal
+// references. The walker's `parent_key` context-awareness skips `$ref`
+// when it appears as a user-defined property name (e.g., AsyncAPI's
+// ReferenceObject), so no false positives occur.
 const BANNED_KEYWORDS: &[&str] = &[
     // Conditional composition
     "if",
@@ -41,18 +43,12 @@ const BANNED_KEYWORDS: &[&str] = &[
     "dependentRequired",
     // #246: patternProperties are stripped/opaque-stringified by p9
     "patternProperties",
-    // #246: reference-mechanism keywords stripped by p9
+    // Reference-mechanism keywords — fully resolved/stripped by pipeline
+    "$ref",
     "$anchor",
     "$dynamicRef",
     "$dynamicAnchor",
 ];
-
-// Keywords banned by OpenAI strict mode but tracked as soft-fail leaks.
-// `$ref` is soft-fail because it can legitimately appear as a *property name*
-// (e.g., AsyncAPI's ReferenceObject has a field named `$ref`). The walker
-// skips `$ref` keys inside `properties` maps to avoid false positives.
-// Only true schema-level `$ref` directives are counted.
-const SOFT_FAIL_KEYWORDS: &[&str] = &["$ref"];
 
 // ── Walker ────────────────────────────────────────────────────────────────
 
@@ -236,62 +232,32 @@ fn test_strict_emission_real_world_components_no_core_banned() {
     }
 }
 
-/// 4. Real-world schemas: per-component ref-like keyword leak tracking.
+/// 4. Real-world schemas: per-component output is fully clean.
 ///
-/// Component extraction may produce schemas with unresolved `$anchor`,
-/// `$dynamicRef`, or `$ref` when the source uses advanced referencing.
-/// This test pins the current counts as regression guards.
+/// All banned keywords — including `$ref` — must be absent from
+/// component output. The walker's `parent_key` awareness prevents
+/// false positives on user-defined property names like `$ref`.
 #[test]
-fn test_strict_emission_real_world_components_ref_leak_pins() {
+fn test_strict_emission_real_world_components_no_ref_leaks() {
     let options = strict_options();
     let extract_opts = ExtractOptions::default();
 
-    // (label, fixture_path, max_ref_like_leaks)
-    //
-    // Pins capture the CURRENT state after p5 opaque-stringifies non-local
-    // refs and p9 strips $anchor/$dynamicRef/$dynamicAnchor. Remaining leaks
-    // are `$ref` as property names inside `properties` maps (false positives
-    // are already filtered by the walker). If a pass fix drops the count,
-    // update the pin.
-    let cases = [
-        ("arazzo", "arazzo/source/arazzo-schema.json", 0),
-        (
-            "asyncapi",
-            "asyncapi/source/asyncapi-2.6-schema-local.json",
-            0,
-        ),
-        ("oas31", "oas31/source/oas31-schema.json", 0),
+    let real_fixtures = [
+        ("arazzo", "arazzo/source/arazzo-schema.json"),
+        ("asyncapi", "asyncapi/source/asyncapi-2.6-schema-local.json"),
+        ("oas31", "oas31/source/oas31-schema.json"),
     ];
 
-    for (label, path, max_leaks) in &cases {
+    for (label, path) in &real_fixtures {
         let schema = load_real_fixture(path);
         let all = convert_all_components(&schema, &options, &extract_opts)
             .unwrap_or_else(|e| panic!("{label} convert_all_components failed: {e}"));
 
-        let mut total_leaks = Vec::new();
         for (pointer, comp_result) in &all.components {
-            let leaks = collect_banned_keys(
+            assert_no_banned_keys(
                 &comp_result.schema,
                 &format!("{label}:{pointer}"),
-                SOFT_FAIL_KEYWORDS,
-            );
-            total_leaks.extend(leaks);
-        }
-
-        assert!(
-            total_leaks.len() <= *max_leaks,
-            "{label}: soft-fail keyword leaks INCREASED from {max_leaks} to {} — regression!\nLeaks:\n{}",
-            total_leaks.len(),
-            total_leaks.iter()
-                .map(|(kw, p)| format!("  {kw} at {p}"))
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
-
-        if total_leaks.len() < *max_leaks {
-            eprintln!(
-                "NOTE: {label} soft-fail leaks decreased from {max_leaks} to {} — tighten the pin!",
-                total_leaks.len()
+                BANNED_KEYWORDS,
             );
         }
     }
@@ -319,7 +285,7 @@ fn test_strict_emission_walker_catches_violations() {
         "Walker should catch 'unevaluatedProperties' at root level"
     );
 
-    // Nested $ref inside array items — checked against REF_LIKE_KEYWORDS
+    // Nested $ref inside array items — now caught by BANNED_KEYWORDS
     let nested_ref = json!({
         "type": "object",
         "properties": {
@@ -335,11 +301,11 @@ fn test_strict_emission_walker_catches_violations() {
         }
     });
     let result = std::panic::catch_unwind(|| {
-        assert_no_banned_keys(&nested_ref, "#", SOFT_FAIL_KEYWORDS);
+        assert_no_banned_keys(&nested_ref, "#", BANNED_KEYWORDS);
     });
     assert!(
         result.is_err(),
-        "Walker should catch '$ref' nested inside array items when using REF_LIKE_KEYWORDS"
+        "Walker should catch '$ref' nested inside array items"
     );
 
     // Nested inside array of arrays
@@ -357,10 +323,11 @@ fn test_strict_emission_walker_catches_violations() {
     );
 }
 
-/// 6. Negative test: collect_banned_keys returns accurate counts.
+/// 6. Negative test: collect_banned_keys returns accurate violations.
 #[test]
 fn test_strict_emission_collector_counts_violations() {
     use serde_json::json;
+    use std::collections::HashSet;
 
     let schema_with_leaks = json!({
         "type": "object",
@@ -376,21 +343,15 @@ fn test_strict_emission_collector_counts_violations() {
         }
     });
 
-    // BANNED_KEYWORDS should find 2: unevaluatedProperties + not
-    let core_leaks = collect_banned_keys(&schema_with_leaks, "#", BANNED_KEYWORDS);
+    // BANNED_KEYWORDS should find: unevaluatedProperties, not, $ref
+    let leaks = collect_banned_keys(&schema_with_leaks, "#", BANNED_KEYWORDS);
+    let found_keywords: HashSet<&str> = leaks.iter().map(|(kw, _)| kw.as_str()).collect();
+    let expected: HashSet<&str> = ["unevaluatedProperties", "not", "$ref"]
+        .into_iter()
+        .collect();
     assert_eq!(
-        core_leaks.len(),
-        2,
-        "Should find exactly 2 core violations (unevaluatedProperties, not), found: {:?}",
-        core_leaks
-    );
-
-    // REF_LIKE_KEYWORDS should find 1: $ref
-    let ref_leaks = collect_banned_keys(&schema_with_leaks, "#", SOFT_FAIL_KEYWORDS);
-    assert_eq!(
-        ref_leaks.len(),
-        1,
-        "Should find exactly 1 ref-like violation ($ref), found: {:?}",
-        ref_leaks
+        found_keywords, expected,
+        "Expected violations {:?}, found {:?}",
+        expected, found_keywords
     );
 }
