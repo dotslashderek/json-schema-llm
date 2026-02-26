@@ -33,6 +33,7 @@ pub mod rehydrator;
 pub(crate) mod resolver;
 pub(crate) mod schema_utils;
 pub(crate) mod schema_walker;
+pub mod validation;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -44,6 +45,7 @@ pub use error::{ConvertError, ErrorCode, ProviderCompatError};
 pub use extract::{extract_component, list_components, ExtractOptions, ExtractResult};
 pub use rehydrator::{coerce_types, RehydrateResult};
 pub use schema_utils::{build_path, escape_pointer_segment, split_path, unescape_pointer_segment};
+pub use validation::strict_mode::{validate_strict_mode, StrictModeRule, StrictModeViolation};
 
 /// Bridge API version. Included in all FFI JSON responses.
 pub const API_VERSION: &str = "1.0";
