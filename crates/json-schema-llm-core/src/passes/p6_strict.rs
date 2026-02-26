@@ -53,9 +53,10 @@ fn walk(
         other => return Ok(other),
     };
 
-    // If this is a `type: object`, enforce strict mode.
+    // If this is an object (explicit `type: object` or implicitly object-like
+    // via `properties` / `required`), enforce strict mode.
     // Objects without `properties` get sealed with an empty properties map.
-    if is_typed_object(&result) {
+    if is_typed_object(&result) || is_implicit_object(&result) {
         if !result.contains_key("properties") {
             result.insert("properties".to_string(), json!({}));
         }
@@ -71,8 +72,24 @@ fn walk(
 }
 
 // ---------------------------------------------------------------------------
-// Helpers — delegated to `pass_utils`
+// Helpers
 // ---------------------------------------------------------------------------
+
+/// Detect schemas that are implicitly object-like: they have `properties` or
+/// `required` but no explicit `type` field. OpenAI strict mode demands
+/// `additionalProperties: false` on these too.
+///
+/// This is intentionally narrower than `is_typed_object` (which gates on
+/// `type: "object"`) to avoid false positives in p3/p9 where the explicit
+/// type matters.
+fn is_implicit_object(obj: &serde_json::Map<String, Value>) -> bool {
+    // Already has a type → not implicit (handled by is_typed_object or skipped)
+    if obj.contains_key("type") {
+        return false;
+    }
+    // Has properties or required → object-like
+    obj.contains_key("properties") || obj.contains_key("required")
+}
 
 // ===========================================================================
 // Tests
