@@ -6,6 +6,16 @@
       "path": "#/properties/inputs"
     },
     {
+      "type": "recursive_inflate",
+      "path": "#/properties/steps/items/properties/onFailure/items/anyOf/0/properties/criteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/steps/items/properties/onSuccess/items/anyOf/0/properties/criteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
       "type": "nullable_optional",
       "path": "#/properties/dependsOn",
       "originalRequired": false
@@ -47,7 +57,47 @@
     },
     {
       "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
       "path": "#/properties/failureActions/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/parameters/anyOf/0/items/anyOf/0/properties/in",
       "originalRequired": false
     },
     {
@@ -57,12 +107,186 @@
     },
     {
       "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/operationId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/operationPath",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/outputs",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/parameters",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/requestBody",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/successCriteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/requestBody/anyOf/0/properties/contentType",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/requestBody/anyOf/0/properties/payload",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/requestBody/anyOf/0/properties/replacements",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
       "path": "#/properties/successActions/anyOf/0/items/anyOf/1/properties/value",
       "originalRequired": false
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0"
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/1/properties/type"
     },
     {
       "type": "json_string_parse",
@@ -70,15 +294,59 @@
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/parameters/anyOf/0/items/anyOf/0"
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/steps/items"
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/type"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/successActions/anyOf/0/items/anyOf/0"
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/1/properties/value"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/1/properties/value"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/outputs/anyOf/0"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/parameters/anyOf/0/items"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/requestBody/anyOf/0/properties/payload/anyOf/0"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/requestBody/anyOf/0/properties/replacements/anyOf/0/items"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0/items/anyOf/1/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/1/properties/type"
     }
   ],
   "droppedConstraints": [
@@ -298,6 +566,35 @@
       "value": true
     },
     {
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
       "path": "#/properties/parameters/anyOf/0",
       "constraint": "uniqueItems",
       "value": true
@@ -313,9 +610,130 @@
       "value": 1
     },
     {
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/steps/items/properties/parameters/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/requestBody/anyOf/0/properties/replacements/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/steps/items/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
       "path": "#/properties/successActions/anyOf/0",
       "constraint": "uniqueItems",
       "value": true
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
     }
   ]
 }

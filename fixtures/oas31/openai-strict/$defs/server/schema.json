@@ -26,8 +26,43 @@
                 "type": "string"
               },
               "value": {
-                "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-                "type": "string"
+                "$comment": "https://spec.openapis.org/oas/v3.1.0#server-variable-object",
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "enum": {
+                    "anyOf": [
+                      {
+                        "description": "Constraints: minimum 1 item(s).",
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "default",
+                  "description",
+                  "enum"
+                ],
+                "type": "object"
               }
             },
             "required": [

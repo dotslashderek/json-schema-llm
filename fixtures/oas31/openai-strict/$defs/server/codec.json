@@ -17,8 +17,14 @@
       "originalRequired": false
     },
     {
-      "type": "json_string_parse",
-      "path": "#/properties/variables/anyOf/0/items/properties/value"
+      "type": "nullable_optional",
+      "path": "#/properties/variables/anyOf/0/items/properties/value/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/variables/anyOf/0/items/properties/value/properties/enum",
+      "originalRequired": false
     }
   ],
   "droppedConstraints": [
@@ -26,6 +32,11 @@
       "path": "#/properties/url",
       "constraint": "format",
       "value": "uri-reference"
+    },
+    {
+      "path": "#/properties/variables/anyOf/0/items/properties/value/properties/enum/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
     }
   ]
 }

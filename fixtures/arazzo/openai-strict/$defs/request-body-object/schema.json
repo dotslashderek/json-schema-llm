@@ -30,8 +30,24 @@
         {
           "description": "A list of locations and values to set within a payload. Constraints: items must be unique.",
           "items": {
-            "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-            "type": "string"
+            "$comment": "https://spec.openapis.org/arazzo/v1.0#payload-replacement-object",
+            "additionalProperties": false,
+            "description": "Describes a location within a payload (e.g., a request body) and a value to set within the location",
+            "properties": {
+              "target": {
+                "description": "A JSON Pointer or XPath Expression which MUST be resolved against the request body",
+                "type": "string"
+              },
+              "value": {
+                "description": "The value set within the target location",
+                "type": "string"
+              }
+            },
+            "required": [
+              "target",
+              "value"
+            ],
+            "type": "object"
           },
           "type": "array"
         },

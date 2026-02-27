@@ -5,8 +5,48 @@
     "contact": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#contact-object",
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: email.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: uri.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "email",
+            "name",
+            "url"
+          ],
+          "type": "object"
         },
         {
           "type": "null"
@@ -26,8 +66,40 @@
     "license": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#license-object",
+          "additionalProperties": false,
+          "properties": {
+            "identifier": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: uri.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "identifier",
+            "name",
+            "url"
+          ],
+          "type": "object"
         },
         {
           "type": "null"

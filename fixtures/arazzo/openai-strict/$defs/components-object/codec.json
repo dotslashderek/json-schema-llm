@@ -46,16 +46,77 @@
       "originalRequired": false
     },
     {
-      "type": "json_string_parse",
-      "path": "#/properties/failureActions/anyOf/0/items/properties/value"
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/parameters/anyOf/0/items/properties/value/properties/in",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/parameters/anyOf/0/items/properties/value"
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/successActions/anyOf/0/items/properties/value"
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items"
     }
   ],
   "droppedConstraints": [
@@ -193,6 +254,59 @@
           }
         ]
       }
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/failureActions/anyOf/0/items/properties/value/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
     },
     {
       "path": "#/patternProperties/^(inputs|parameters|successActions|failureActions)$",

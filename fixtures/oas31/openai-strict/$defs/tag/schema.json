@@ -15,8 +15,29 @@
     "externalDocs": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#external-documentation-object",
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "url": {
+              "description": "Constraints: format: uri.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "url"
+          ],
+          "type": "object"
         },
         {
           "type": "null"

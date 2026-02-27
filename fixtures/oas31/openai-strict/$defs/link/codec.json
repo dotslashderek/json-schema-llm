@@ -42,13 +42,33 @@
       "originalRequired": false
     },
     {
+      "type": "nullable_optional",
+      "path": "#/properties/body/anyOf/0/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/body/anyOf/0/properties/variables",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/body/anyOf/0/properties/variables/anyOf/0/items/properties/value/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/body/anyOf/0/properties/variables/anyOf/0/items/properties/value/properties/enum",
+      "originalRequired": false
+    },
+    {
       "type": "root_object_wrapper",
       "path": "#",
       "wrapperKey": "result"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/result/properties/body/anyOf/0"
+      "path": "#/properties/result/properties/body/anyOf/0/properties/variables/anyOf/0/items/properties/value"
     },
     {
       "type": "json_string_parse",
@@ -56,6 +76,16 @@
     }
   ],
   "droppedConstraints": [
+    {
+      "path": "#/properties/body/anyOf/0/properties/url",
+      "constraint": "format",
+      "value": "uri-reference"
+    },
+    {
+      "path": "#/properties/body/anyOf/0/properties/variables/anyOf/0/items/properties/value/properties/enum/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
     {
       "path": "#/properties/operationRef/anyOf/0",
       "constraint": "format",

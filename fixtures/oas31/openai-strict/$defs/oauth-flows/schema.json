@@ -5,8 +5,55 @@
     "authorizationCode": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#specification-extensions",
+          "additionalProperties": false,
+          "properties": {
+            "authorizationUrl": {
+              "description": "Constraints: format: uri.",
+              "type": "string"
+            },
+            "refreshUrl": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: uri.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scopes": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "tokenUrl": {
+              "description": "Constraints: format: uri.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "authorizationUrl",
+            "refreshUrl",
+            "scopes",
+            "tokenUrl"
+          ],
+          "type": "object"
         },
         {
           "type": "null"
@@ -16,8 +63,50 @@
     "clientCredentials": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#specification-extensions",
+          "additionalProperties": false,
+          "properties": {
+            "refreshUrl": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: uri.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scopes": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "tokenUrl": {
+              "description": "Constraints: format: uri.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "refreshUrl",
+            "scopes",
+            "tokenUrl"
+          ],
+          "type": "object"
         },
         {
           "type": "null"
@@ -27,8 +116,50 @@
     "implicit": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#specification-extensions",
+          "additionalProperties": false,
+          "properties": {
+            "authorizationUrl": {
+              "description": "Constraints: format: uri.",
+              "type": "string"
+            },
+            "refreshUrl": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: uri.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scopes": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "authorizationUrl",
+            "refreshUrl",
+            "scopes"
+          ],
+          "type": "object"
         },
         {
           "type": "null"
@@ -38,8 +169,50 @@
     "password": {
       "anyOf": [
         {
-          "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-          "type": "string"
+          "$comment": "https://spec.openapis.org/oas/v3.1.0#specification-extensions",
+          "additionalProperties": false,
+          "properties": {
+            "refreshUrl": {
+              "anyOf": [
+                {
+                  "description": "Constraints: format: uri.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scopes": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "tokenUrl": {
+              "description": "Constraints: format: uri.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "refreshUrl",
+            "scopes",
+            "tokenUrl"
+          ],
+          "type": "object"
         },
         {
           "type": "null"
