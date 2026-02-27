@@ -23,6 +23,14 @@
                         "description": "MUST be a valid JSON value serialized as a string. Structure: any. Do NOT output plain text — the value must parse with JSON.parse().",
                         "type": "string"
                       },
+                      "example": {
+                        "description": "MUST be a valid JSON value serialized as a string. Structure: any. Do NOT output plain text — the value must parse with JSON.parse().",
+                        "type": "string"
+                      },
+                      "examples": {
+                        "description": "MUST be a valid JSON value serialized as a string. Structure: any. Do NOT output plain text — the value must parse with JSON.parse().",
+                        "type": "string"
+                      },
                       "schema": {
                         "description": "MUST be a valid JSON value serialized as a string. Structure: any. Do NOT output plain text — the value must parse with JSON.parse().",
                         "type": "string"
@@ -30,6 +38,8 @@
                     },
                     "required": [
                       "encoding",
+                      "example",
+                      "examples",
                       "schema"
                     ],
                     "type": "object"

@@ -3,8 +3,6 @@
   "properties": {
     "result": {
       "$comment": "https://spec.openapis.org/oas/v3.1.0#specification-extensions",
-      "$id": "https://spec.openapis.org/oas/3.1/schema/2022-10-07",
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "additionalProperties": false,
       "description": "The description of OpenAPI v3.1.x documents without schema validation, as defined by https://spec.openapis.org/oas/v3.1.0\n\nNote: While properties may be nullable, a valid output MUST include a non-null value for at least one of these properties: components, paths, webhooks",
       "properties": {
