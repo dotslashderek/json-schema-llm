@@ -53,12 +53,97 @@
     },
     {
       "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
       "path": "#/properties/onFailure/anyOf/0/items/anyOf/1/properties/value",
       "originalRequired": false
     },
     {
       "type": "nullable_optional",
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
       "path": "#/properties/onSuccess/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/requestBody/anyOf/0/properties/contentType",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/requestBody/anyOf/0/properties/payload",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/requestBody/anyOf/0/properties/replacements",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successCriteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type",
       "originalRequired": false
     },
     {
@@ -68,11 +153,11 @@
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/result/properties/onFailure/anyOf/0/items/anyOf/0"
+      "path": "#/properties/result/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/result/properties/onSuccess/anyOf/0/items/anyOf/0"
+      "path": "#/properties/result/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items"
     },
     {
       "type": "json_string_parse",
@@ -84,11 +169,7 @@
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/result/properties/requestBody/anyOf/0"
-    },
-    {
-      "type": "json_string_parse",
-      "path": "#/properties/result/properties/successCriteria/anyOf/0/items"
+      "path": "#/properties/result/properties/requestBody/anyOf/0/properties/payload/anyOf/0"
     }
   ],
   "droppedConstraints": [
@@ -303,12 +384,70 @@
       "value": true
     },
     {
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
       "path": "#/properties/onSuccess/anyOf/0",
       "constraint": "uniqueItems",
       "value": true
     },
     {
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
       "path": "#/properties/parameters/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/requestBody/anyOf/0/properties/replacements/anyOf/0",
       "constraint": "uniqueItems",
       "value": true
     },
@@ -321,6 +460,20 @@
       "path": "#/properties/successCriteria/anyOf/0",
       "constraint": "minItems",
       "value": 1
+    },
+    {
+      "path": "#/properties/successCriteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
     }
   ]
 }

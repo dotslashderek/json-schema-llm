@@ -377,9 +377,7 @@
                     },
                     "schema": {
                       "anyOf": [
-                        {
-                          "$dynamicRef": "#meta"
-                        },
+                        {},
                         {
                           "type": "null"
                         }

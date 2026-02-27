@@ -22,25 +22,542 @@
       "keyField": "key"
     },
     {
+      "type": "recursive_inflate",
+      "path": "#/properties/components/properties/failureActions/items/properties/value/properties/criteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/properties/failureActions/items/properties/value/properties/stepId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/properties/failureActions/items/properties/value/properties/workflowId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/properties/inputs/items/properties/value"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/components/properties/successActions/items/properties/value/properties/criteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/properties/successActions/items/properties/value/properties/stepId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/properties/successActions/items/properties/value/properties/workflowId"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/workflows/items/properties/failureActions/items/anyOf/0/properties/criteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/failureActions/items/anyOf/0/properties/stepId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/failureActions/items/anyOf/0/properties/workflowId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/inputs"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/items/anyOf/0/properties/criteria/items",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/items/anyOf/0/properties/stepId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/items/anyOf/0/properties/workflowId"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/items/anyOf/0/properties/criteria/items",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/items/anyOf/0/properties/stepId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/items/anyOf/0/properties/workflowId"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody/properties/replacements/items",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/workflowId"
+    },
+    {
+      "type": "recursive_inflate",
+      "path": "#/properties/workflows/items/properties/successActions/items/anyOf/0/properties/criteria/items/anyOf/1",
+      "originalRef": "#/$defs/specification-extensions"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/successActions/items/anyOf/0/properties/stepId"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/successActions/items/anyOf/0/properties/workflowId"
+    },
+    {
       "type": "nullable_optional",
       "path": "#/properties/components",
       "originalRequired": false
     },
     {
-      "type": "json_string_parse",
-      "path": "#/properties/components/anyOf/0"
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/inputs",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/parameters",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/successActions",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/parameters/anyOf/0/items/properties/value/properties/in",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/info/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/info/properties/summary",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/sourceDescriptions/items/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/dependsOn",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/inputs",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/outputs",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/parameters",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/summary",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/parameters/anyOf/0/items/anyOf/0/properties/in",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/parameters/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/description",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/operationId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/operationPath",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/outputs",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/parameters",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryAfter",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryLimit",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody/anyOf/0/properties/contentType",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody/anyOf/0/properties/payload",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody/anyOf/0/properties/replacements",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/stepId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/workflowId",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/properties/context",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type",
+      "originalRequired": false
+    },
+    {
+      "type": "nullable_optional",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/1/properties/value",
+      "originalRequired": false
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/info"
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/sourceDescriptions/items"
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/type"
     },
     {
       "type": "json_string_parse",
-      "path": "#/properties/workflows/items"
+      "path": "#/properties/components/anyOf/0/properties/parameters/anyOf/0/items/properties/value/properties/in"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/anyOf/0/properties/parameters/anyOf/0/items/properties/value/properties/value"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/1/properties/value"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/outputs/anyOf/0"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/parameters/anyOf/0/items/anyOf/0/properties/in"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/parameters/anyOf/0/items/anyOf/0/properties/value"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/parameters/anyOf/0/items/anyOf/1/properties/value"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/outputs"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/parameters"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/type"
+    },
+    {
+      "type": "json_string_parse",
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/1/properties/value"
     }
   ],
   "droppedConstraints": [
@@ -250,6 +767,66 @@
       }
     },
     {
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/failureActions/anyOf/0/items/properties/value/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/components/anyOf/0/properties/successActions/anyOf/0/items/properties/value/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/components/anyOf/0/patternProperties/^(inputs|parameters|successActions|failureActions)$",
+      "constraint": "propertyNames",
+      "value": {
+        "pattern": "^[a-zA-Z0-9\\.\\-_]+$"
+      }
+    },
+    {
       "path": "#/properties/sourceDescriptions",
       "constraint": "uniqueItems",
       "value": true
@@ -260,6 +837,11 @@
       "value": 1
     },
     {
+      "path": "#/properties/sourceDescriptions/items/properties/url",
+      "constraint": "format",
+      "value": "uri-reference"
+    },
+    {
       "path": "#/properties/workflows",
       "constraint": "uniqueItems",
       "value": true
@@ -268,6 +850,158 @@
       "path": "#/properties/workflows",
       "constraint": "minItems",
       "value": 1
+    },
+    {
+      "path": "#/properties/workflows/items/properties/dependsOn/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/workflows/items/properties/failureActions/anyOf/0/items/anyOf/0/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/workflows/items/properties/parameters/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryAfter/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onFailure/anyOf/0/items/anyOf/0/properties/retryLimit/anyOf/0",
+      "constraint": "minimum",
+      "value": 0
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/onSuccess/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/parameters/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/requestBody/anyOf/0/properties/replacements/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/workflows/items/properties/steps/items/properties/successCriteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
+    },
+    {
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "uniqueItems",
+      "value": true
+    },
+    {
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0",
+      "constraint": "minItems",
+      "value": 1
+    },
+    {
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items",
+      "constraint": "dependentRequired",
+      "value": {
+        "type": [
+          "context"
+        ]
+      }
+    },
+    {
+      "path": "#/properties/workflows/items/properties/successActions/anyOf/0/items/anyOf/0/properties/criteria/anyOf/0/items/anyOf/0/properties/type/anyOf/0",
+      "constraint": "default",
+      "value": "simple"
     }
   ]
 }

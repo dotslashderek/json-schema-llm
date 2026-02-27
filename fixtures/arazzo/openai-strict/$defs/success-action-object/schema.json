@@ -8,8 +8,81 @@
         {
           "description": "A list of assertions to determine if this action SHALL be executed. Constraints: items must be unique; minimum 1 item(s).",
           "items": {
-            "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-            "type": "string"
+            "$comment": "https://spec.openapis.org/arazzo/v1.0#criterion-object",
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "description": "The type of condition to be applied",
+                        "enum": [
+                          "simple",
+                          "regex",
+                          "jsonpath",
+                          "xpath"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              {
+                "$comment": "https://spec.openapis.org/arazzo/v1.0#criterion-expression-type-object",
+                "additionalProperties": false,
+                "description": "An object used to describe the type and version of an expression used within a Criterion Object",
+                "properties": {
+                  "type": {
+                    "description": "The type of condition to be applied",
+                    "enum": [
+                      "jsonpath",
+                      "xpath"
+                    ]
+                  },
+                  "version": {
+                    "description": "A short hand string representing the version of the expression type",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "version"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "An object used to specify the context, conditions, and condition types that can be used to prove or satisfy assertions specified in Step Object successCriteria, Success Action Object criteria, and Failure Action Object criteria",
+            "properties": {
+              "condition": {
+                "description": "The condition to apply",
+                "type": "string"
+              },
+              "context": {
+                "anyOf": [
+                  {
+                    "description": "A runtime expression used to set the context for the condition to be applied on",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "condition",
+              "context"
+            ],
+            "type": "object"
           },
           "type": "array"
         },
@@ -25,7 +98,7 @@
     "stepId": {
       "anyOf": [
         {
-          "description": "Unique string to represent the step",
+          "description": "The stepId to transfer to upon success of the step",
           "type": "string"
         },
         {
@@ -43,7 +116,7 @@
     "workflowId": {
       "anyOf": [
         {
-          "description": "Unique string to represent the workflow",
+          "description": "The workflowId referencing an existing workflow within the Arazzo description to transfer to upon success of the step",
           "type": "string"
         },
         {

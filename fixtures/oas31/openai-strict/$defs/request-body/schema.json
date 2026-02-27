@@ -10,9 +10,24 @@
             "type": "string"
           },
           "value": {
+            "$comment": "https://spec.openapis.org/oas/v3.1.0#media-type-object",
             "additionalProperties": false,
             "properties": {
-              "example": {
+              "encoding": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "description": "MUST be a valid JSON value serialized as a string. Structure: {key: string, value: string}. Do NOT output plain text — the value must parse with JSON.parse().",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "schema": {
                 "anyOf": [
                   {
                     "description": "MUST be a valid JSON object serialized as a string, e.g. \"{\\\"key\\\": \\\"value\\\"}\". Do NOT output plain text — the value must parse with JSON.parse().",
@@ -22,25 +37,11 @@
                     "type": "null"
                   }
                 ]
-              },
-              "examples": {
-                "anyOf": [
-                  {
-                    "items": {
-                      "description": "MUST be a valid JSON value serialized as a string. Structure: {key: string, value: any}. Do NOT output plain text — the value must parse with JSON.parse().",
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
               }
             },
             "required": [
-              "example",
-              "examples"
+              "encoding",
+              "schema"
             ],
             "type": "object"
           }

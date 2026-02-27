@@ -9,8 +9,57 @@
         "body": {
           "anyOf": [
             {
-              "description": "MUST be a valid JSON value serialized as a string. Structure: any. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
-              "type": "string"
+              "$comment": "https://spec.openapis.org/oas/v3.1.0#server-object",
+              "additionalProperties": false,
+              "properties": {
+                "description": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "url": {
+                  "description": "Constraints: format: uri-reference.",
+                  "type": "string"
+                },
+                "variables": {
+                  "anyOf": [
+                    {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "description": "MUST be a valid JSON value serialized as a string. Structure: {default: string, description: any, enum: any}. includes properties matching pattern(s) [^x-]. Do NOT output plain text — the value must parse with JSON.parse().",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "description",
+                "url",
+                "variables"
+              ],
+              "type": "object"
             },
             {
               "type": "null"

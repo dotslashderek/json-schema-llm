@@ -12,9 +12,16 @@
       "originalRequired": false
     },
     {
-      "type": "json_string_parse",
-      "path": "#/properties/externalDocs/anyOf/0"
+      "type": "nullable_optional",
+      "path": "#/properties/externalDocs/anyOf/0/properties/description",
+      "originalRequired": false
     }
   ],
-  "droppedConstraints": []
+  "droppedConstraints": [
+    {
+      "path": "#/properties/externalDocs/anyOf/0/properties/url",
+      "constraint": "format",
+      "value": "uri"
+    }
+  ]
 }
