@@ -1,10 +1,8 @@
 package com.jsonschema.llm.wasi;
 
 import com.dylibso.chicory.log.SystemLogger;
-import com.dylibso.chicory.runtime.ExportFunction;
 import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
-import com.dylibso.chicory.runtime.Memory;
 import com.dylibso.chicory.wasi.WasiOptions;
 import com.dylibso.chicory.wasi.WasiPreview1;
 import com.dylibso.chicory.wasm.Parser;
@@ -13,12 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * WASI-backed wrapper for jsonschema-llm.
@@ -180,98 +172,14 @@ class JsonSchemaLlmWasi implements AutoCloseable {
             WasmModule wasmModule = Parser.parse(wasmFile);
             ImportValues importValues = ImportValues.builder().addFunction(wasi.toHostFunctions()).build();
             Instance instance = Instance.builder(wasmModule).withImportValues(importValues).build();
-            Memory memory = instance.memory();
-
-            ExportFunction jslAlloc = instance.export("jsl_alloc");
-            ExportFunction jslFree = instance.export("jsl_free");
-            ExportFunction jslResultFree = instance.export("jsl_result_free");
-            ExportFunction func = instance.export(funcName);
 
             // ABI version handshake (once per engine lifetime)
             if (!abiVerified) {
-                try {
-                    ExportFunction abiFn = instance.export("jsl_abi_version");
-                    if (abiFn == null) {
-                        throw new RuntimeException(
-                                "Incompatible WASM module: missing required 'jsl_abi_version' export");
-                    }
-                    long[] abiResult = abiFn.apply();
-                    int version = (int) abiResult[0];
-                    if (version != EXPECTED_ABI_VERSION) {
-                        throw new RuntimeException(
-                                "ABI version mismatch: binary=" + version + ", expected=" + EXPECTED_ABI_VERSION);
-                    }
-                } catch (RuntimeException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new RuntimeException("ABI handshake failed", e);
-                }
+                JslAbi.verifyAbi(instance);
                 abiVerified = true;
             }
 
-            // Allocate and write arguments
-            List<int[]> allocs = new ArrayList<>();
-            List<Long> flatArgs = new ArrayList<>();
-            int resultPtr = 0;
-
-            try {
-                for (String arg : jsonArgs) {
-                    byte[] bytes = arg.getBytes(StandardCharsets.UTF_8);
-                    long[] allocResult = jslAlloc.apply(bytes.length);
-                    int ptr = (int) allocResult[0];
-                    if (ptr == 0 && bytes.length > 0) {
-                        throw new RuntimeException("jsl_alloc returned null for " + bytes.length + " bytes");
-                    }
-                    memory.write(ptr, bytes);
-                    allocs.add(new int[] { ptr, bytes.length });
-                    flatArgs.add((long) ptr);
-                    flatArgs.add((long) bytes.length);
-                }
-
-                // Call function
-                long[] wasmArgs = flatArgs.stream().mapToLong(Long::longValue).toArray();
-                long[] result = func.apply(wasmArgs);
-                resultPtr = (int) result[0];
-                if (resultPtr == 0) {
-                    throw new RuntimeException(funcName + " returned null result pointer");
-                }
-
-                // Read JslResult (12 bytes: 3 × LE u32)
-                byte[] resultBytes = memory.readBytes(resultPtr, JSL_RESULT_SIZE);
-                ByteBuffer buf = ByteBuffer.wrap(resultBytes).order(ByteOrder.LITTLE_ENDIAN);
-                int status = buf.getInt();
-                int payloadPtr = buf.getInt();
-                int payloadLen = buf.getInt();
-
-                // Validate payload bounds
-                if (payloadPtr < 0 || payloadLen < 0) {
-                    throw new RuntimeException(
-                            "invalid payload pointer/length: ptr=" + payloadPtr + " len=" + payloadLen);
-                }
-
-                // Read payload
-                byte[] payloadBytes = memory.readBytes(payloadPtr, payloadLen);
-                String payloadStr = new String(payloadBytes, StandardCharsets.UTF_8);
-
-                JsonNode payload = MAPPER.readTree(payloadStr);
-
-                if (status == STATUS_ERROR) {
-                    throw new JslException(
-                            payload.path("code").asText("unknown"),
-                            payload.path("message").asText("unknown error"),
-                            payload.path("path").asText(""));
-                }
-
-                return payload;
-            } finally {
-                // Always free guest memory
-                if (resultPtr != 0) {
-                    jslResultFree.apply(resultPtr);
-                }
-                for (int[] alloc : allocs) {
-                    jslFree.apply(alloc[0], alloc[1]);
-                }
-            }
+            return JslAbi.callExport(instance, funcName, jsonArgs);
         } catch (JslException e) {
             throw e;
         } catch (Exception e) {
