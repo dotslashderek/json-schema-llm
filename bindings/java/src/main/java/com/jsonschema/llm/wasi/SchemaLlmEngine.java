@@ -72,14 +72,14 @@ public class SchemaLlmEngine implements AutoCloseable {
     }
 
     /**
-     * Build a fresh WASM Instance with its own WASI state.
+     * AutoCloseable holder that ties a WasiPreview1 lifetime to an Instance.
      *
      * <p>
      * WasiPreview1 is stateful (fd table, stdio, clocks) so each Instance
-     * must get its own copy. The cachedModule (parsed bytes) is the only
-     * thing safe to share.
+     * must get its own copy. Closing the scope releases the WASI resources.
+     * The cachedModule (parsed bytes) is the only thing safe to share.
      */
-    private Instance buildInstance() {
+    private WasiScope openWasiScope() {
         WasiPreview1 wasi = WasiPreview1.builder()
                 .withOptions(WasiOptions.builder().build())
                 .withLogger(new SystemLogger())
@@ -87,9 +87,26 @@ public class SchemaLlmEngine implements AutoCloseable {
         ImportValues importValues = ImportValues.builder()
                 .addFunction(wasi.toHostFunctions())
                 .build();
-        return Instance.builder(cachedModule)
+        Instance instance = Instance.builder(cachedModule)
                 .withImportValues(importValues)
                 .build();
+        return new WasiScope(wasi, instance);
+    }
+
+    /** Pairs a WasiPreview1 with its Instance for scoped resource management. */
+    private static class WasiScope implements AutoCloseable {
+        final Instance instance;
+        private final WasiPreview1 wasi;
+
+        WasiScope(WasiPreview1 wasi, Instance instance) {
+            this.wasi = wasi;
+            this.instance = instance;
+        }
+
+        @Override
+        public void close() throws Exception {
+            wasi.close();
+        }
     }
 
     /**
@@ -157,13 +174,12 @@ public class SchemaLlmEngine implements AutoCloseable {
     public ConvertResult convert(Object schema, ConvertOptions options)
             throws JslException {
         ensureOpen();
-        try {
+        try (WasiScope scope = openWasiScope()) {
             String schemaJson = MAPPER.writeValueAsString(schema);
             String optsJson = options != null ? options.toJson() : "{}";
 
-            Instance instance = buildInstance();
-            verifyAbiOnce(instance);
-            com.fasterxml.jackson.databind.JsonNode raw = JslAbi.callExport(instance, "jsl_convert", schemaJson,
+            verifyAbiOnce(scope.instance);
+            com.fasterxml.jackson.databind.JsonNode raw = JslAbi.callExport(scope.instance, "jsl_convert", schemaJson,
                     optsJson);
             return ConvertResult.fromJson(raw);
         } catch (JslException e) {
@@ -189,14 +205,13 @@ public class SchemaLlmEngine implements AutoCloseable {
     public RehydrateResult rehydrate(Object data, Object codec, Object schema)
             throws JslException {
         ensureOpen();
-        try {
+        try (WasiScope scope = openWasiScope()) {
             String dataJson = MAPPER.writeValueAsString(data);
             String codecJson = MAPPER.writeValueAsString(codec);
             String schemaJson = MAPPER.writeValueAsString(schema);
 
-            Instance instance = buildInstance();
-            verifyAbiOnce(instance);
-            com.fasterxml.jackson.databind.JsonNode raw = JslAbi.callExport(instance, "jsl_rehydrate", dataJson,
+            verifyAbiOnce(scope.instance);
+            com.fasterxml.jackson.databind.JsonNode raw = JslAbi.callExport(scope.instance, "jsl_rehydrate", dataJson,
                     codecJson, schemaJson);
             return RehydrateResult.fromJson(raw);
         } catch (JslException e) {
@@ -216,12 +231,11 @@ public class SchemaLlmEngine implements AutoCloseable {
     public com.fasterxml.jackson.databind.JsonNode listComponents(Object schema)
             throws JslException {
         ensureOpen();
-        try {
+        try (WasiScope scope = openWasiScope()) {
             String schemaJson = MAPPER.writeValueAsString(schema);
 
-            Instance instance = buildInstance();
-            verifyAbiOnce(instance);
-            return JslAbi.callExport(instance, "jsl_list_components", schemaJson);
+            verifyAbiOnce(scope.instance);
+            return JslAbi.callExport(scope.instance, "jsl_list_components", schemaJson);
         } catch (JslException e) {
             throw e;
         } catch (Exception e) {
@@ -242,13 +256,12 @@ public class SchemaLlmEngine implements AutoCloseable {
     public com.fasterxml.jackson.databind.JsonNode extractComponent(Object schema, String pointer,
             String options) throws JslException {
         ensureOpen();
-        try {
+        try (WasiScope scope = openWasiScope()) {
             String schemaJson = MAPPER.writeValueAsString(schema);
             String optsJson = options != null ? options : "{}";
 
-            Instance instance = buildInstance();
-            verifyAbiOnce(instance);
-            return JslAbi.callExport(instance, "jsl_extract_component", schemaJson, pointer, optsJson);
+            verifyAbiOnce(scope.instance);
+            return JslAbi.callExport(scope.instance, "jsl_extract_component", schemaJson, pointer, optsJson);
         } catch (JslException e) {
             throw e;
         } catch (Exception e) {
@@ -268,14 +281,13 @@ public class SchemaLlmEngine implements AutoCloseable {
     public com.fasterxml.jackson.databind.JsonNode convertAllComponents(Object schema,
             ConvertOptions convertOptions, String extractOptions) throws JslException {
         ensureOpen();
-        try {
+        try (WasiScope scope = openWasiScope()) {
             String schemaJson = MAPPER.writeValueAsString(schema);
             String convOptsJson = convertOptions != null ? convertOptions.toJson() : "{}";
             String extOptsJson = extractOptions != null ? extractOptions : "{}";
 
-            Instance instance = buildInstance();
-            verifyAbiOnce(instance);
-            return JslAbi.callExport(instance, "jsl_convert_all_components", schemaJson, convOptsJson,
+            verifyAbiOnce(scope.instance);
+            return JslAbi.callExport(scope.instance, "jsl_convert_all_components", schemaJson, convOptsJson,
                     extOptsJson);
         } catch (JslException e) {
             throw e;

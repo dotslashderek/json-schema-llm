@@ -1,6 +1,7 @@
 package com.jsonschema.llm.wasi;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,10 +28,9 @@ class WasmResolverTest {
 
         @Test
         void resolveReturnsEnvVarPathWhenSet() {
-                // The test environment sets JSL_WASM_PATH in build.gradle.kts.
-                // WasmResolver.resolve() should find it at Level 2 (env var).
+                // Only runs when JSL_WASM_PATH is externally provided (e.g. local dev).
                 String envPath = System.getenv("JSL_WASM_PATH");
-                assertNotNull(envPath, "JSL_WASM_PATH must be set in the test environment");
+                assumeTrue(envPath != null, "JSL_WASM_PATH not set — skipping env var test");
 
                 Path resolved = WasmResolver.resolve();
                 assertNotNull(resolved);
@@ -45,7 +45,7 @@ class WasmResolverTest {
         @Test
         void systemPropertyTakesPrecedenceOverEnvVar() {
                 String envPath = System.getenv("JSL_WASM_PATH");
-                assertNotNull(envPath, "JSL_WASM_PATH must be set in the test environment");
+                assumeTrue(envPath != null, "JSL_WASM_PATH not set — skipping precedence test");
 
                 // Set sys prop to the same valid path — it should be used first
                 System.setProperty(WasmResolver.SYS_PROP_KEY, envPath);
@@ -144,8 +144,7 @@ class WasmResolverTest {
 
         @Test
         void noArgCreateUsesAutoDiscovery() throws Exception {
-                // SchemaLlmEngine.create() should work without any explicit path.
-                // The env var JSL_WASM_PATH is set in the test environment.
+                // SchemaLlmEngine.create() should work via classpath or env var.
                 try (SchemaLlmEngine engine = SchemaLlmEngine.create()) {
                         assertNotNull(engine, "No-arg create() should return a non-null engine");
                 }

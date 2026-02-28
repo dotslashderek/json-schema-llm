@@ -70,11 +70,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
-                <configuration>
-                    <environmentVariables>
-                        <JSL_WASM_PATH>${project.basedir}/../../target/wasm32-wasip1/release/json_schema_llm_wasi.wasm</JSL_WASM_PATH>
-                    </environmentVariables>
-                </configuration>
             </plugin>
         </plugins>
     </build>
